@@ -25,6 +25,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "firebaseApiKey": "AIzaSyAJYVi3fK6aSc1p9YOwS80PqEo030sAS9Y",
+      "firebaseAuthDomain": "epark-aeffb.firebaseapp.com",
+      "firebaseProjectId": "epark-aeffb",
+      "firebaseStorageBucket": "epark-aeffb.firebasestorage.app",
+      "firebaseMessagingSenderId": "803310516090",
+      "firebaseAppId": "1:803310516090:web:1a1750fa3e718b513248c3"
     }
   }
 }
