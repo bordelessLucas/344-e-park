@@ -11,14 +11,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from '../contexts/AuthContext';
 import { useAuth } from '../hooks/useAuth';
 import { Logo } from '../components/Logo/Logo';
+import { AddVehicle, VehicleData } from '../pages/AddVehicle/AddVehicle';
 
-const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
+const HomeScreen = ({ onLogout, onAddVehicle }: { onLogout: () => void; onAddVehicle: () => void }) => {
   const { user, logout } = useAuth();
+  const [selectedCity, setSelectedCity] = useState('Porto Alegre');
+  const [showCityModal, setShowCityModal] = useState(false);
+
+  const cities = ['Porto Alegre', 'Canoas', 'Esteio'];
 
   const handleLogout = async () => {
     try {
@@ -38,10 +44,13 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         <TouchableOpacity style={homeStyles.menuButton}>
           <Ionicons name="menu" size={24} color="#0055FF" />
         </TouchableOpacity>
-        <View style={homeStyles.locationContainer}>
-          <Text style={[homeStyles.locationText, { color: '#0055FF' }]}>Salvador</Text>
+        <TouchableOpacity 
+          style={homeStyles.locationContainer}
+          onPress={() => setShowCityModal(true)}
+        >
+          <Text style={[homeStyles.locationText, { color: '#0055FF' }]}>{selectedCity}</Text>
           <Ionicons name="chevron-down" size={20} color="#0055FF" style={{ marginLeft: 4 }} />
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity style={homeStyles.shareButton}>
           <Ionicons name="share-outline" size={24} color="#0055FF" />
         </TouchableOpacity>
@@ -49,7 +58,10 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
 
       <ScrollView style={homeStyles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Vehicle Registration Section */}
-        <TouchableOpacity style={homeStyles.vehicleCard}>
+        <TouchableOpacity 
+          style={homeStyles.vehicleCard}
+          onPress={onAddVehicle}
+        >
           <Image 
             source={require('../../assets/carro.png')} 
             style={homeStyles.carroImage}
@@ -64,44 +76,6 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         {/* Services Grid */}
         <View style={homeStyles.grid}>
           {/* Row 1 */}
-          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.smallCard]}>
-            <View style={homeStyles.smallCardIcon}>
-              <Image 
-                source={require('../../assets/estapar.png')} 
-                style={homeStyles.estaparImage}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={homeStyles.serviceText}>ESTAPAR</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.smallCard]}>
-            <View style={homeStyles.smallCardIcon}>
-              <Image 
-                source={require('../../assets/Garagem.png')} 
-                style={homeStyles.garagemImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={homeStyles.smallCardTextContainer}>
-              <Text style={homeStyles.serviceText}>Garagens</Text>
-              <Text style={homeStyles.serviceSubtext}>Pagar Tíquete</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Row 2 - TAG ZUL+ Card (larger) */}
-          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.tagCard]}>
-            <View style={homeStyles.tagIcon}>
-              <Text style={homeStyles.tagIconText}>CC</Text>
-            </View>
-            <Text style={homeStyles.tagText}>TAG ZUL+</Text>
-            <Text style={homeStyles.tagSubtext}>sem mensalidade</Text>
-            <TouchableOpacity style={homeStyles.tollButton}>
-              <Text style={homeStyles.tollButtonText}>PEDÁGIO FREE FLOW</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-
-          {/* Row 3 */}
           <TouchableOpacity style={homeStyles.serviceCard}>
             <View style={homeStyles.serviceIcon}>
               <Ionicons name="document-text-outline" size={24} color="#0055FF" />
@@ -118,7 +92,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             <Text style={homeStyles.serviceSubtext}>Cotação e contatos</Text>
           </TouchableOpacity>
 
-          {/* Row 4 */}
+          {/* Row 2 */}
           <TouchableOpacity style={homeStyles.serviceCard}>
             <View style={homeStyles.serviceIcon}>
               <Ionicons name="flash-outline" size={24} color="#0055FF" />
@@ -135,7 +109,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             <Text style={homeStyles.serviceSubtext}>Entrega em 50 min</Text>
           </TouchableOpacity>
 
-          {/* Row 5 */}
+          {/* Row 3 */}
           <TouchableOpacity style={homeStyles.serviceCard}>
             <View style={homeStyles.serviceIcon}>
               <Ionicons name="trending-up-outline" size={24} color="#0055FF" />
@@ -151,8 +125,64 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             <Text style={homeStyles.serviceText}>CNH Protegida</Text>
             <Text style={homeStyles.serviceSubtext}>Maior controle</Text>
           </TouchableOpacity>
+
+          {/* Row 4 - Pagar Zona Azul e Pagar Garagens */}
+          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard]}>
+            <View style={homeStyles.smallCardIcon}>
+              <Text style={homeStyles.estacionarIconText}>E</Text>
+            </View>
+            <Text style={homeStyles.serviceText}>Pagar Zona Azul</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard]}>
+            <View style={homeStyles.smallCardIcon}>
+              <Image 
+                source={require('../../assets/Garagem.png')} 
+                style={homeStyles.garagemImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={homeStyles.smallCardTextContainer}>
+              <Text style={homeStyles.serviceText}>Pagar Garagens</Text>
+              <Text style={homeStyles.serviceSubtext}>Pagar Tíquete</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* City Selection Modal */}
+      <Modal
+        visible={showCityModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCityModal(false)}
+      >
+        <View style={homeStyles.modalOverlay}>
+          <View style={homeStyles.modalContent}>
+            <View style={homeStyles.modalHeader}>
+              <Text style={homeStyles.modalTitle}>Selecione a cidade</Text>
+              <TouchableOpacity onPress={() => setShowCityModal(false)}>
+                <Ionicons name="close" size={24} color="#0055FF" />
+              </TouchableOpacity>
+            </View>
+            {cities.map((city) => (
+              <TouchableOpacity
+                key={city}
+                style={homeStyles.modalItem}
+                onPress={() => {
+                  setSelectedCity(city);
+                  setShowCityModal(false);
+                }}
+              >
+                <Text style={homeStyles.modalItemText}>{city}</Text>
+                {selectedCity === city && (
+                  <Ionicons name="checkmark" size={20} color="#0055FF" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -372,7 +402,7 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home'>('login');
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle'>('login');
 
   React.useEffect(() => {
     if (loading === false) {
@@ -400,6 +430,21 @@ const AppContent = () => {
     setCurrentScreen('login');
   };
 
+  const handleAddVehicle = () => {
+    setCurrentScreen('addVehicle');
+  };
+
+  const handleCancelAddVehicle = () => {
+    setCurrentScreen('home');
+  };
+
+  const handleVehicleAdded = (vehicleData: VehicleData) => {
+    // Aqui você pode salvar o veículo no Firebase ou fazer o que precisar
+    console.log('Veículo adicionado:', vehicleData);
+    Alert.alert('Sucesso', 'Veículo adicionado com sucesso!');
+    setCurrentScreen('home');
+  };
+
   if (loading === true) {
     return (
       <View style={styles.container}>
@@ -408,8 +453,17 @@ const AppContent = () => {
     );
   }
 
+  if (currentScreen === 'addVehicle') {
+    return (
+      <AddVehicle
+        onCancel={handleCancelAddVehicle}
+        onAdd={handleVehicleAdded}
+      />
+    );
+  }
+
   if (currentScreen === 'home' && user !== null) {
-    return <HomeScreen onLogout={handleLogout} />;
+    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} />;
   }
 
   if (currentScreen === 'register') {
@@ -560,7 +614,7 @@ const homeStyles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#0055FF',
+    backgroundColor: '#4A9EFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -573,7 +627,7 @@ const homeStyles = StyleSheet.create({
   },
   serviceCard: {
     width: '47%',
-    backgroundColor: '#0055FF',
+    backgroundColor: '#4A9EFF',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -590,6 +644,9 @@ const homeStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
+  strongBlueCard: {
+    backgroundColor: '#0055FF',
+  },
   smallCardIcon: {
     width: 36,
     height: 36,
@@ -604,6 +661,11 @@ const homeStyles = StyleSheet.create({
     width: 20,
     height: 20,
   },
+  estacionarIconText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0055FF',
+  },
   garagemImage: {
     width: 20,
     height: 20,
@@ -615,11 +677,6 @@ const homeStyles = StyleSheet.create({
   smallCardTextContainer: {
     flex: 1,
     alignItems: 'flex-start',
-  },
-  tagCard: {
-    width: '100%',
-    backgroundColor: '#B3E5FC',
-    minHeight: 160,
   },
   serviceIcon: {
     width: 48,
@@ -648,46 +705,44 @@ const homeStyles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 2,
   },
-  tagIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    maxHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  tagIconText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#0055FF',
-  },
-  tagText: {
+  modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0055FF',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  tagSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: 12,
-  },
-  tollButton: {
-    backgroundColor: '#0055FF',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
-  tollButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
     fontWeight: '600',
-    textAlign: 'center',
+    color: '#333',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
   },
 });
 
