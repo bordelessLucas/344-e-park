@@ -18,8 +18,9 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { useAuth } from '../hooks/useAuth';
 import { Logo } from '../components/Logo/Logo';
 import { AddVehicle, VehicleData } from '../pages/AddVehicle/AddVehicle';
+import { Payment } from '../pages/Payment/Payment';
 
-const HomeScreen = ({ onLogout, onAddVehicle }: { onLogout: () => void; onAddVehicle: () => void }) => {
+const HomeScreen = ({ onLogout, onAddVehicle, onPayment }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void }) => {
   const { user, logout } = useAuth();
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
@@ -127,7 +128,10 @@ const HomeScreen = ({ onLogout, onAddVehicle }: { onLogout: () => void; onAddVeh
           </TouchableOpacity>
 
           {/* Row 4 - Pagar Zona Azul e Pagar Garagens */}
-          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard]}>
+          <TouchableOpacity 
+            style={[homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard]}
+            onPress={onPayment}
+          >
             <View style={homeStyles.smallCardIcon}>
               <Text style={homeStyles.estacionarIconText}>E</Text>
             </View>
@@ -402,7 +406,7 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle'>('login');
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment'>('login');
 
   React.useEffect(() => {
     if (loading === false) {
@@ -445,6 +449,14 @@ const AppContent = () => {
     setCurrentScreen('home');
   };
 
+  const handlePayment = () => {
+    setCurrentScreen('payment');
+  };
+
+  const handleBackFromPayment = () => {
+    setCurrentScreen('home');
+  };
+
   if (loading === true) {
     return (
       <View style={styles.container}>
@@ -462,8 +474,12 @@ const AppContent = () => {
     );
   }
 
+  if (currentScreen === 'payment') {
+    return <Payment onBack={handleBackFromPayment} />;
+  }
+
   if (currentScreen === 'home' && user !== null) {
-    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} />;
+    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} />;
   }
 
   if (currentScreen === 'register') {

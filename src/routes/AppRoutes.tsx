@@ -4,7 +4,7 @@ import { createNativeStackNavigator, NativeStackNavigationProp } from "@react-na
 import { paths } from "./paths";
 import { RootStackParamList } from "./types";
 import { ProtectedRoutes } from "./ProtectRoutes";
-import { Login, Register } from "../pages";
+import { Login, Register, Payment } from "../pages";
 import { View, Text, StyleSheet } from "react-native";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +35,16 @@ const RegisterWrapper = () => {
   return <Register onLogin={handleLogin} onGoToLogin={handleGoToLogin} />;
 };
 
+const PaymentWrapper = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return <Payment onBack={handleBack} />;
+};
+
 export const AppRoutes = () => {
   return (
     <NavigationContainer>
@@ -48,6 +58,7 @@ export const AppRoutes = () => {
         <Stack.Screen name={paths.login} component={Login} />
         <Stack.Screen name={paths.register} component={RegisterWrapper} />
         <Stack.Screen name={paths.menu} component={ProtectedMenu} />
+        <Stack.Screen name={paths.payment} component={PaymentWrapper} />
       </Stack.Navigator>
     </NavigationContainer>
   );

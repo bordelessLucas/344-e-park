@@ -5,5 +5,6 @@ export type RootStackParamList = {
   [paths.login]: undefined;
   [paths.register]: undefined;
   [paths.menu]: undefined;
+  [paths.payment]: undefined;
 };
 
