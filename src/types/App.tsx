@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   View,
@@ -12,6 +12,8 @@ import {
   Platform,
   Image,
   Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -20,15 +22,123 @@ import { Logo } from '../components/Logo/Logo';
 import { AddVehicle, VehicleData } from '../pages/AddVehicle/AddVehicle';
 import { Payment } from '../pages/Payment/Payment';
 
-const HomeScreen = ({ onLogout, onAddVehicle, onPayment }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void }) => {
+const ViewVehiclesScreen = ({ onBack, onAddVehicle }: { onBack: () => void; onAddVehicle: () => void }) => {
+  // TODO: Buscar veículos do Firebase
+  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+
+  return (
+    <View style={homeStyles.container}>
+      <StatusBar style="dark" />
+      
+      {/* Header */}
+      <View style={homeStyles.header}>
+        <TouchableOpacity style={homeStyles.menuButton} onPress={onBack}>
+          <Ionicons name="arrow-back" size={24} color="#0055FF" />
+        </TouchableOpacity>
+        <Text style={[homeStyles.locationText, { color: '#0055FF', fontSize: 20, fontWeight: 'bold' }]}>
+          Meus Veículos
+        </Text>
+        <TouchableOpacity style={homeStyles.shareButton} onPress={onAddVehicle}>
+          <Ionicons name="add" size={24} color="#0055FF" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={homeStyles.scrollView} showsVerticalScrollIndicator={false}>
+        {vehicles.length === 0 ? (
+          <View style={homeStyles.emptyContainer}>
+            <Ionicons name="car-outline" size={80} color="#CCCCCC" />
+            <Text style={homeStyles.emptyText}>Nenhum veículo cadastrado</Text>
+            <Text style={homeStyles.emptySubtext}>Toque no botão + para adicionar um veículo</Text>
+            <TouchableOpacity
+              style={homeStyles.addButton}
+              onPress={onAddVehicle}
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+              <Text style={homeStyles.addButtonText}>Adicionar Veículo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={homeStyles.vehiclesList}>
+            {vehicles.map((vehicle, index) => (
+              <View key={index} style={homeStyles.vehicleItem}>
+                <View style={homeStyles.vehicleItemContent}>
+                  <View style={homeStyles.vehicleItemHeader}>
+                    <Text style={homeStyles.vehicleItemPlaca}>{vehicle.placa}</Text>
+                    <Text style={homeStyles.vehicleItemTipo}>{vehicle.tipo}</Text>
+                  </View>
+                  <Text style={homeStyles.vehicleItemModelo}>{vehicle.modelo}</Text>
+                  <Text style={homeStyles.vehicleItemAno}>Ano: {vehicle.ano}</Text>
+                  {vehicle.possuiSeguro && (
+                    <View style={homeStyles.vehicleItemBadge}>
+                      <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
+                      <Text style={homeStyles.vehicleItemBadgeText}>Com Seguro</Text>
+                    </View>
+                  )}
+                </View>
+                <TouchableOpacity style={homeStyles.vehicleItemAction}>
+                  <Ionicons name="chevron-forward" size={24} color="#0055FF" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+};
+
+const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void }) => {
   const { user, logout } = useAuth();
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.8)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
 
   const cities = ['Porto Alegre', 'Canoas', 'Esteio'];
 
+  const toggleSidebar = () => {
+    if (sidebarOpen) {
+      // Fechar sidebar
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -Dimensions.get('window').width * 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setSidebarOpen(false));
+    } else {
+      // Abrir sidebar
+      setSidebarOpen(true);
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
+
+  const closeSidebar = () => {
+    if (sidebarOpen) {
+      toggleSidebar();
+    }
+  };
+
   const handleLogout = async () => {
     try {
+      closeSidebar();
       await logout();
       onLogout();
     } catch (error: any) {
@@ -40,9 +150,113 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment }: { onLogout: () => voi
     <View style={homeStyles.container}>
       <StatusBar style="dark" />
       
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <Animated.View
+          style={[
+            homeStyles.overlay,
+            {
+              opacity: overlayOpacity,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={homeStyles.overlayTouchable}
+            activeOpacity={1}
+            onPress={closeSidebar}
+          />
+        </Animated.View>
+      )}
+
+      {/* Sidebar */}
+      <Animated.View
+        style={[
+          homeStyles.sidebar,
+          {
+            transform: [{ translateX: slideAnim }],
+          },
+        ]}
+      >
+        <View style={homeStyles.sidebarHeader}>
+          <View style={homeStyles.sidebarUserInfo}>
+            <View style={homeStyles.sidebarAvatar}>
+              <Ionicons name="person" size={32} color="#0055FF" />
+            </View>
+            <View style={homeStyles.sidebarUserDetails}>
+              <Text style={homeStyles.sidebarUserName}>
+                {user?.displayName || 'Usuário'}
+              </Text>
+              <Text style={homeStyles.sidebarUserEmail}>
+                {user?.email || ''}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={closeSidebar} style={homeStyles.sidebarCloseButton}>
+            <Ionicons name="close" size={24} color="#0055FF" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={homeStyles.sidebarContent}>
+          <TouchableOpacity
+            style={homeStyles.sidebarItem}
+            onPress={() => {
+              closeSidebar();
+              onViewVehicles();
+            }}
+          >
+            <Ionicons name="car-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>Meus Veículos</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={homeStyles.sidebarItem}
+            onPress={() => {
+              closeSidebar();
+              onPayment();
+            }}
+          >
+            <Ionicons name="card-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>Pagamentos</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={homeStyles.sidebarItem}>
+            <Ionicons name="document-text-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>IPVA, Multas e Licenciamento</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={homeStyles.sidebarItem}>
+            <Ionicons name="shield-checkmark-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>Seguro</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={homeStyles.sidebarItem}>
+            <Ionicons name="settings-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>Configurações</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={homeStyles.sidebarItem}>
+            <Ionicons name="help-circle-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>Ajuda</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={homeStyles.sidebarItem}>
+            <Ionicons name="information-circle-outline" size={24} color="#0055FF" />
+            <Text style={homeStyles.sidebarItemText}>Sobre</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <TouchableOpacity
+          style={homeStyles.sidebarLogout}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+          <Text style={homeStyles.sidebarLogoutText}>Sair</Text>
+        </TouchableOpacity>
+      </Animated.View>
+      
       {/* Header */}
       <View style={homeStyles.header}>
-        <TouchableOpacity style={homeStyles.menuButton}>
+        <TouchableOpacity style={homeStyles.menuButton} onPress={toggleSidebar}>
           <Ionicons name="menu" size={24} color="#0055FF" />
         </TouchableOpacity>
         <TouchableOpacity 
@@ -406,7 +620,7 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment'>('login');
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles'>('login');
 
   React.useEffect(() => {
     if (loading === false) {
@@ -457,6 +671,14 @@ const AppContent = () => {
     setCurrentScreen('home');
   };
 
+  const handleViewVehicles = () => {
+    setCurrentScreen('viewVehicles');
+  };
+
+  const handleBackFromVehicles = () => {
+    setCurrentScreen('home');
+  };
+
   if (loading === true) {
     return (
       <View style={styles.container}>
@@ -478,8 +700,12 @@ const AppContent = () => {
     return <Payment onBack={handleBackFromPayment} />;
   }
 
+  if (currentScreen === 'viewVehicles') {
+    return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} />;
+  }
+
   if (currentScreen === 'home' && user !== null) {
-    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} />;
+    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} />;
   }
 
   if (currentScreen === 'register') {
@@ -759,6 +985,218 @@ const homeStyles = StyleSheet.create({
   modalItemText: {
     fontSize: 16,
     color: '#333',
+  },
+  // Sidebar Styles
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 998,
+  },
+  overlayTouchable: {
+    flex: 1,
+  },
+  sidebar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: Dimensions.get('window').width * 0.8,
+    backgroundColor: '#FFFFFF',
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 2,
+      height: 0,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sidebarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: 'rgb(215, 239, 253)',
+  },
+  sidebarUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  sidebarAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  sidebarUserDetails: {
+    flex: 1,
+  },
+  sidebarUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0055FF',
+    marginBottom: 4,
+  },
+  sidebarUserEmail: {
+    fontSize: 12,
+    color: '#666',
+  },
+  sidebarCloseButton: {
+    padding: 8,
+  },
+  sidebarContent: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  sidebarItemText: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 16,
+  },
+  sidebarLogout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    backgroundColor: '#0055FF',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+  },
+  sidebarLogoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  // View Vehicles Screen Styles
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0055FF',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 30,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  vehiclesList: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  vehicleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  vehicleItemContent: {
+    flex: 1,
+  },
+  vehicleItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  vehicleItemPlaca: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0055FF',
+  },
+  vehicleItemTipo: {
+    fontSize: 12,
+    color: '#666',
+    backgroundColor: '#F0F0F0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  vehicleItemModelo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  vehicleItemAno: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  vehicleItemBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  vehicleItemBadgeText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  vehicleItemAction: {
+    padding: 8,
   },
 });
 

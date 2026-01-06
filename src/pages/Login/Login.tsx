@@ -13,7 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Logo } from '../../components/Logo/Logo';
-import { RootStackParamList } from '../../types/App';
+import { RootStackParamList } from '../../routes/types';
 import { useAuth } from '../../hooks/useAuth';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
