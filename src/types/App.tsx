@@ -22,9 +22,7 @@ import { Logo } from '../components/Logo/Logo';
 import { AddVehicle, VehicleData } from '../pages/AddVehicle/AddVehicle';
 import { Payment } from '../pages/Payment/Payment';
 
-const ViewVehiclesScreen = ({ onBack, onAddVehicle }: { onBack: () => void; onAddVehicle: () => void }) => {
-  // TODO: Buscar veículos do Firebase
-  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => void; onAddVehicle: () => void; vehicles: VehicleData[] }) => {
 
   return (
     <View style={homeStyles.container}>
@@ -69,9 +67,18 @@ const ViewVehiclesScreen = ({ onBack, onAddVehicle }: { onBack: () => void; onAd
                   <Text style={homeStyles.vehicleItemModelo}>{vehicle.modelo}</Text>
                   <Text style={homeStyles.vehicleItemAno}>Ano: {vehicle.ano}</Text>
                   {vehicle.possuiSeguro && (
-                    <View style={homeStyles.vehicleItemBadge}>
-                      <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
-                      <Text style={homeStyles.vehicleItemBadgeText}>Com Seguro</Text>
+                    <View>
+                      <View style={homeStyles.vehicleItemBadge}>
+                        <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
+                        <Text style={homeStyles.vehicleItemBadgeText}>Com Seguro</Text>
+                      </View>
+                      {vehicle.insurance && (
+                        <View style={{ marginTop: 8 }}>
+                          <Text style={homeStyles.vehicleItemInsurance}>Seguradora: {vehicle.insurance.company}</Text>
+                          <Text style={homeStyles.vehicleItemInsurance}>Apolice: {vehicle.insurance.policyNumber}</Text>
+                          <Text style={homeStyles.vehicleItemInsurance}>Validade: {vehicle.insurance.validUntil}</Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
@@ -656,11 +663,14 @@ const AppContent = () => {
     setCurrentScreen('home');
   };
 
+  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+
   const handleVehicleAdded = (vehicleData: VehicleData) => {
-    // Aqui você pode salvar o veículo no Firebase ou fazer o que precisar
+    // Salva o veículo no estado local (e aqui você pode também salvar no Firebase)
+    setVehicles((prev) => [...prev, vehicleData]);
     console.log('Veículo adicionado:', vehicleData);
     Alert.alert('Sucesso', 'Veículo adicionado com sucesso!');
-    setCurrentScreen('home');
+    setCurrentScreen('viewVehicles');
   };
 
   const handlePayment = () => {
@@ -701,7 +711,7 @@ const AppContent = () => {
   }
 
   if (currentScreen === 'viewVehicles') {
-    return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} />;
+    return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} vehicles={vehicles} />;
   }
 
   if (currentScreen === 'home' && user !== null) {
@@ -1174,6 +1184,10 @@ const homeStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
+  },
+  vehicleItemInsurance: {
+    fontSize: 13,
+    color: '#555',
   },
   vehicleItemAno: {
     fontSize: 14,

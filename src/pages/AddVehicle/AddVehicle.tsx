@@ -26,6 +26,11 @@ export interface VehicleData {
   modelo: string;
   ano: string;
   possuiSeguro: boolean;
+  insurance?: {
+    company: string;
+    policyNumber: string;
+    validUntil: string;
+  };
 }
 
 export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
@@ -35,17 +40,22 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
   const [modelo, setModelo] = useState('');
   const [ano, setAno] = useState('');
   const [possuiSeguro, setPossuiSeguro] = useState(false);
+  const [insuranceCompany, setInsuranceCompany] = useState('');
+  const [insurancePolicy, setInsurancePolicy] = useState('');
+  const [insuranceValidUntil, setInsuranceValidUntil] = useState('');
   
   const [showTipoModal, setShowTipoModal] = useState(false);
   const [showAnoModal, setShowAnoModal] = useState(false);
+  const [showPlacaInfo, setShowPlacaInfo] = useState(false);
 
   const tipos = ['Carro', 'Motocicleta', 'Caminhão/Ônibus'];
   
-  // Gerar anos de 2024 até 1980
-  const anos = Array.from({ length: 45 }, (_, i) => (2024 - i).toString());
+  // Gerar anos de 2025 até 1980
+  const anos = Array.from({ length: 45 }, (_, i) => (2025 - i).toString());
 
   const placaCompleta = `${placaLetras}-${placaNumeros}`;
-  const isFormValid = placaLetras.trim().length === 3 && placaNumeros.trim().length === 4 && tipo !== '' && modelo.trim() !== '' && ano !== '';
+  const placaPatternRegex = /^(?:[0-9][A-Z][0-9]{2}|[0-9]{4})$/;
+  const isFormValid = placaLetras.trim().length === 3 && placaPatternRegex.test(placaNumeros) && tipo !== '' && modelo.trim() !== '' && ano !== '';
 
   const handleAdd = () => {
     if (!isFormValid) {
@@ -60,6 +70,14 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
       ano,
       possuiSeguro,
     };
+
+    if (possuiSeguro) {
+      vehicleData.insurance = {
+        company: insuranceCompany.trim(),
+        policyNumber: insurancePolicy.trim(),
+        validUntil: insuranceValidUntil.trim(),
+      };
+    }
 
     if (onAdd) {
       onAdd(vehicleData);
@@ -94,7 +112,12 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
       >
         {/* Placa Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Placa</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Placa</Text>
+            <TouchableOpacity style={styles.infoButton} onPress={() => setShowPlacaInfo(true)}>
+              <Ionicons name="information-circle" size={16} color="#0055FF" />
+            </TouchableOpacity>
+          </View>
           <View style={styles.placaContainer}>
             <TextInput
               style={[styles.placaInput, styles.placaLeft]}
@@ -111,17 +134,19 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
             <Text style={styles.placaSeparator}>-</Text>
             <TextInput
               style={[styles.placaInput, styles.placaRight]}
-              placeholder="0000"
+              placeholder="1A23 ou 1234"
               placeholderTextColor="#999"
               value={placaNumeros}
               onChangeText={(text) => {
-                const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
+                const upper = text.toUpperCase();
+                const cleaned = upper.replace(/[^A-Z0-9]/g, '').slice(0, 4);
                 setPlacaNumeros(cleaned);
               }}
               maxLength={4}
-              keyboardType="numeric"
+              autoCapitalize="characters"
             />
           </View>
+          <Text style={styles.helperText}>Formato: LLL-NLNN (L = letra, N = número). Ex.: ABC-1A23. Placas antigas com 4 números também são aceitas: ABC-1234</Text>
         </View>
 
         {/* Tipo Select */}
@@ -184,6 +209,34 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
           </View>
         </View>
 
+        {possuiSeguro && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Informações do seguro</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome da seguradora"
+              placeholderTextColor="#999"
+              value={insuranceCompany}
+              onChangeText={setInsuranceCompany}
+            />
+            <TextInput
+              style={[styles.input, { marginTop: 12 }]}
+              placeholder="Número da apólice"
+              placeholderTextColor="#999"
+              value={insurancePolicy}
+              onChangeText={setInsurancePolicy}
+              autoCapitalize="characters"
+            />
+            <TextInput
+              style={[styles.input, { marginTop: 12 }]}
+              placeholder="Validade (AAAA-MM-DD)"
+              placeholderTextColor="#999"
+              value={insuranceValidUntil}
+              onChangeText={setInsuranceValidUntil}
+            />
+          </View>
+        )}
+
         {/* Adicionar Button */}
         <TouchableOpacity
           style={[styles.addButton, !isFormValid && styles.addButtonDisabled]}
@@ -198,6 +251,29 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
           <Text style={styles.cancelText}>Cancelar</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Placa Info Modal */}
+      <Modal
+        visible={showPlacaInfo}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPlacaInfo(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Formato da placa</Text>
+              <TouchableOpacity onPress={() => setShowPlacaInfo(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20 }}>
+              <Text style={styles.modalItemText}>As placas seguem o padrão LLL-NLNN, onde L = letra e N = número.</Text>
+              <Text style={[styles.modalItemText, { marginTop: 10 }]}>Exemplo: ABC-1A23</Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Tipo Modal */}
       <Modal
@@ -362,6 +438,15 @@ const styles = StyleSheet.create({
   },
   placaRight: {
     flex: 1.5,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
   },
   selectInput: {
     flexDirection: 'row',
