@@ -22,6 +22,8 @@ import { Logo } from '../components/Logo/Logo';
 import { AddVehicle, VehicleData } from '../pages/AddVehicle/AddVehicle';
 import { Payment } from '../pages/Payment/Payment';
 import { MarketValue } from '../pages/MarketValue/MarketValue';
+import { Insurance } from '../pages/Insurance/Insurance';
+import { IPVAAndFines } from '../pages/IPVAAndFines/IPVAAndFines';
 
 const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => void; onAddVehicle: () => void; vehicles: VehicleData[] }) => {
 
@@ -95,7 +97,7 @@ const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => 
   );
 };
 
-const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarketValue }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void; onMarketValue: () => void }) => {
+const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarketValue, onInsurance, onIPVAAndFines }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void; onMarketValue: () => void; onInsurance: () => void; onIPVAAndFines: () => void }) => {
   const { user, logout } = useAuth();
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
@@ -227,12 +229,24 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
             <Text style={homeStyles.sidebarItemText}>Pagamentos</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={homeStyles.sidebarItem}>
+          <TouchableOpacity
+            style={homeStyles.sidebarItem}
+            onPress={() => {
+              closeSidebar();
+              onIPVAAndFines();
+            }}
+          >
             <Ionicons name="document-text-outline" size={24} color="#0055FF" />
             <Text style={homeStyles.sidebarItemText}>IPVA, Multas e Licenciamento</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={homeStyles.sidebarItem}>
+          <TouchableOpacity
+            style={homeStyles.sidebarItem}
+            onPress={() => {
+              closeSidebar();
+              onInsurance();
+            }}
+          >
             <Ionicons name="shield-checkmark-outline" size={24} color="#0055FF" />
             <Text style={homeStyles.sidebarItemText}>Seguro</Text>
           </TouchableOpacity>
@@ -299,7 +313,7 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
         {/* Services Grid */}
         <View style={homeStyles.grid}>
           {/* Row 1 */}
-          <TouchableOpacity style={homeStyles.serviceCard}>
+          <TouchableOpacity style={homeStyles.serviceCard} onPress={onIPVAAndFines}>
             <View style={homeStyles.serviceIcon}>
               <Ionicons name="document-text-outline" size={24} color="#0055FF" />
             </View>
@@ -307,7 +321,7 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
             <Text style={homeStyles.serviceSubtext}>& Licenciamento</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={homeStyles.serviceCard}>
+          <TouchableOpacity style={homeStyles.serviceCard} onPress={onInsurance}>
             <View style={homeStyles.serviceIcon}>
               <Ionicons name="shield-checkmark-outline" size={24} color="#0055FF" />
             </View>
@@ -628,7 +642,7 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles' | 'marketValue'>('login');
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles' | 'marketValue' | 'insurance' | 'ipvaAndFines'>('login');
 
   React.useEffect(() => {
     if (loading === false) {
@@ -698,6 +712,22 @@ const AppContent = () => {
     setCurrentScreen('home');
   };
 
+  const handleInsurance = () => {
+    setCurrentScreen('insurance');
+  };
+
+  const handleBackFromInsurance = () => {
+    setCurrentScreen('home');
+  };
+
+  const handleIPVAAndFines = () => {
+    setCurrentScreen('ipvaAndFines');
+  };
+
+  const handleBackFromIPVAAndFines = () => {
+    setCurrentScreen('home');
+  };
+
   if (loading === true) {
     return (
       <View style={styles.container}>
@@ -727,8 +757,16 @@ const AppContent = () => {
     return <MarketValue onBack={handleBackFromMarketValue} vehicles={vehicles} />;
   }
 
+  if (currentScreen === 'insurance') {
+    return <Insurance onBack={handleBackFromInsurance} vehicles={vehicles} />;
+  }
+
+  if (currentScreen === 'ipvaAndFines') {
+    return <IPVAAndFines onBack={handleBackFromIPVAAndFines} vehicles={vehicles} />;
+  }
+
   if (currentScreen === 'home' && user !== null) {
-    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} onMarketValue={handleMarketValue} />;
+    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} onMarketValue={handleMarketValue} onInsurance={handleInsurance} onIPVAAndFines={handleIPVAAndFines} />;
   }
 
   if (currentScreen === 'register') {
