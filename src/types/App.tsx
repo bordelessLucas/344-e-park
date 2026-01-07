@@ -21,6 +21,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Logo } from '../components/Logo/Logo';
 import { AddVehicle, VehicleData } from '../pages/AddVehicle/AddVehicle';
 import { Payment } from '../pages/Payment/Payment';
+import { MarketValue } from '../pages/MarketValue/MarketValue';
 
 const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => void; onAddVehicle: () => void; vehicles: VehicleData[] }) => {
 
@@ -94,7 +95,7 @@ const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => 
   );
 };
 
-const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void }) => {
+const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarketValue }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void; onMarketValue: () => void }) => {
   const { user, logout } = useAuth();
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
@@ -332,7 +333,7 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles }: { onL
           </TouchableOpacity>
 
           {/* Row 3 */}
-          <TouchableOpacity style={homeStyles.serviceCard}>
+          <TouchableOpacity style={homeStyles.serviceCard} onPress={onMarketValue}>
             <View style={homeStyles.serviceIcon}>
               <Ionicons name="trending-up-outline" size={24} color="#0055FF" />
             </View>
@@ -627,7 +628,7 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles'>('login');
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles' | 'marketValue'>('login');
 
   React.useEffect(() => {
     if (loading === false) {
@@ -689,6 +690,14 @@ const AppContent = () => {
     setCurrentScreen('home');
   };
 
+  const handleMarketValue = () => {
+    setCurrentScreen('marketValue');
+  };
+
+  const handleBackFromMarketValue = () => {
+    setCurrentScreen('home');
+  };
+
   if (loading === true) {
     return (
       <View style={styles.container}>
@@ -714,8 +723,12 @@ const AppContent = () => {
     return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} vehicles={vehicles} />;
   }
 
+  if (currentScreen === 'marketValue') {
+    return <MarketValue onBack={handleBackFromMarketValue} vehicles={vehicles} />;
+  }
+
   if (currentScreen === 'home' && user !== null) {
-    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} />;
+    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} onMarketValue={handleMarketValue} />;
   }
 
   if (currentScreen === 'register') {
