@@ -42,7 +42,7 @@ const API_CONFIG = {
   // Substitua pela sua chave de API quando integrar com serviço real
   // Exemplos: Olho no Carro, Consultas Prime, etc.
   API_KEY: 'SUA_CHAVE_API_AQUI',
-  BASE_URL: 'https://api.exemplo.com/v1',
+  BASE_URL: 'https://www.portaldetransito.rs.gov.br/dtw2/app/servico/vei/consulta-veiculo-form.xhtml',
   USE_REAL_API: false, // Mude para true quando tiver API configurada
 };
 
