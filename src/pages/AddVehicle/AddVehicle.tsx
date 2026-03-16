@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 interface AddVehicleProps {
   onCancel: () => void;
   onAdd?: (vehicle: VehicleData) => void;
+  initialVehicle?: VehicleData | null;
+  title?: string;
+  submitLabel?: string;
 }
 
 export interface VehicleData {
@@ -33,7 +36,13 @@ export interface VehicleData {
   };
 }
 
-export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
+export const AddVehicle: React.FC<AddVehicleProps> = ({
+  onCancel,
+  onAdd,
+  initialVehicle = null,
+  title = 'Adicionar veículo',
+  submitLabel = 'Adicionar',
+}) => {
   const [placaLetras, setPlacaLetras] = useState('');
   const [placaNumeros, setPlacaNumeros] = useState('');
   const [tipo, setTipo] = useState('');
@@ -56,6 +65,32 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
   const placaCompleta = `${placaLetras}-${placaNumeros}`;
   const placaPatternRegex = /^(?:[0-9][A-Z][0-9]{2}|[0-9]{4})$/;
   const isFormValid = placaLetras.trim().length === 3 && placaPatternRegex.test(placaNumeros) && tipo !== '' && modelo.trim() !== '' && ano !== '';
+
+  useEffect(() => {
+    if (!initialVehicle) {
+      setPlacaLetras('');
+      setPlacaNumeros('');
+      setTipo('');
+      setModelo('');
+      setAno('');
+      setPossuiSeguro(false);
+      setInsuranceCompany('');
+      setInsurancePolicy('');
+      setInsuranceValidUntil('');
+      return;
+    }
+
+    const [letters = '', numbers = ''] = initialVehicle.placa.split('-');
+    setPlacaLetras(letters);
+    setPlacaNumeros(numbers);
+    setTipo(initialVehicle.tipo);
+    setModelo(initialVehicle.modelo);
+    setAno(initialVehicle.ano);
+    setPossuiSeguro(initialVehicle.possuiSeguro);
+    setInsuranceCompany(initialVehicle.insurance?.company || '');
+    setInsurancePolicy(initialVehicle.insurance?.policyNumber || '');
+    setInsuranceValidUntil(initialVehicle.insurance?.validUntil || '');
+  }, [initialVehicle]);
 
   const handleAdd = () => {
     if (!isFormValid) {
@@ -99,7 +134,7 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
         <TouchableOpacity onPress={onCancel} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Adicionar veículo</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
         <TouchableOpacity style={styles.helpButton}>
           <Ionicons name="help-circle-outline" size={24} color="#fff" />
         </TouchableOpacity>
@@ -243,7 +278,7 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({ onCancel, onAdd }) => {
           onPress={handleAdd}
           disabled={!isFormValid}
         >
-          <Text style={styles.addButtonText}>Adicionar</Text>
+          <Text style={styles.addButtonText}>{submitLabel}</Text>
         </TouchableOpacity>
 
         {/* Cancelar Link */}

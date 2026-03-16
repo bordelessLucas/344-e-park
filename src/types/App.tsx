@@ -29,7 +29,7 @@ import { BatteryService } from '../pages/BatteryService/BatteryService';
 import { FuelStations } from '../pages/FuelStations/FuelStations';
 import { ParkingTicketPage } from '../pages/ParkingTicket/ParkingTicket';
 
-const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => void; onAddVehicle: () => void; vehicles: VehicleData[] }) => {
+const ViewVehiclesScreen = ({ onBack, onAddVehicle, onEditVehicle, vehicles }: { onBack: () => void; onAddVehicle: () => void; onEditVehicle: (index: number) => void; vehicles: VehicleData[] }) => {
 
   return (
     <View style={homeStyles.container}>
@@ -89,8 +89,11 @@ const ViewVehiclesScreen = ({ onBack, onAddVehicle, vehicles }: { onBack: () => 
                     </View>
                   )}
                 </View>
-                <TouchableOpacity style={homeStyles.vehicleItemAction}>
-                  <Ionicons name="chevron-forward" size={24} color="#0055FF" />
+                <TouchableOpacity
+                  style={homeStyles.vehicleItemAction}
+                  onPress={() => onEditVehicle(index)}
+                >
+                  <Ionicons name="create-outline" size={24} color="#0055FF" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -647,6 +650,8 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles' | 'marketValue' | 'insurance' | 'ipvaAndFines' | 'driverLicense' | 'battery' | 'fuel' | 'parkingTicket'>('login');
+  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+  const [editingVehicleIndex, setEditingVehicleIndex] = useState<number | null>(null);
 
   React.useEffect(() => {
     if (loading === false) {
@@ -675,21 +680,39 @@ const AppContent = () => {
   };
 
   const handleAddVehicle = () => {
+    setEditingVehicleIndex(null);
     setCurrentScreen('addVehicle');
   };
 
   const handleCancelAddVehicle = () => {
+    if (editingVehicleIndex !== null) {
+      setCurrentScreen('viewVehicles');
+      return;
+    }
     setCurrentScreen('home');
   };
 
-  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
-
   const handleVehicleAdded = (vehicleData: VehicleData) => {
+    if (editingVehicleIndex !== null) {
+      setVehicles((prev) =>
+        prev.map((vehicle, index) => (index === editingVehicleIndex ? vehicleData : vehicle))
+      );
+      setEditingVehicleIndex(null);
+      Alert.alert('Sucesso', 'Veículo atualizado com sucesso!');
+      setCurrentScreen('viewVehicles');
+      return;
+    }
+
     // Salva o veículo no estado local (e aqui você pode também salvar no Firebase)
     setVehicles((prev) => [...prev, vehicleData]);
     console.log('Veículo adicionado:', vehicleData);
     Alert.alert('Sucesso', 'Veículo adicionado com sucesso!');
     setCurrentScreen('viewVehicles');
+  };
+
+  const handleEditVehicle = (index: number) => {
+    setEditingVehicleIndex(index);
+    setCurrentScreen('addVehicle');
   };
 
   const handlePayment = () => {
@@ -773,10 +796,14 @@ const AppContent = () => {
   }
 
   if (currentScreen === 'addVehicle') {
+    const vehicleToEdit = editingVehicleIndex !== null ? vehicles[editingVehicleIndex] : null;
     return (
       <AddVehicle
         onCancel={handleCancelAddVehicle}
         onAdd={handleVehicleAdded}
+        initialVehicle={vehicleToEdit}
+        title={editingVehicleIndex !== null ? 'Editar veículo' : 'Adicionar veículo'}
+        submitLabel={editingVehicleIndex !== null ? 'Salvar alterações' : 'Adicionar'}
       />
     );
   }
@@ -786,7 +813,7 @@ const AppContent = () => {
   }
 
   if (currentScreen === 'viewVehicles') {
-    return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} vehicles={vehicles} />;
+    return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} onEditVehicle={handleEditVehicle} vehicles={vehicles} />;
   }
 
   if (currentScreen === 'marketValue') {
