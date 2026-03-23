@@ -28,6 +28,7 @@ import { DriverLicensePage } from '../pages/DriverLicense/DriverLicense';
 import { BatteryService } from '../pages/BatteryService/BatteryService';
 import { FuelStations } from '../pages/FuelStations/FuelStations';
 import { ParkingTicketPage } from '../pages/ParkingTicket/ParkingTicket';
+import { PaymentSettings } from '../pages/PaymentSettings/PaymentSettings';
 
 const ViewVehiclesScreen = ({ onBack, onAddVehicle, onEditVehicle, vehicles }: { onBack: () => void; onAddVehicle: () => void; onEditVehicle: (index: number) => void; vehicles: VehicleData[] }) => {
 
@@ -104,7 +105,7 @@ const ViewVehiclesScreen = ({ onBack, onAddVehicle, onEditVehicle, vehicles }: {
   );
 };
 
-const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarketValue, onInsurance, onIPVAAndFines, onDriverLicense, onBattery, onFuel, onParkingTicket }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void; onMarketValue: () => void; onInsurance: () => void; onIPVAAndFines: () => void; onDriverLicense: () => void; onBattery: () => void; onFuel: () => void; onParkingTicket: () => void }) => {
+const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarketValue, onInsurance, onIPVAAndFines, onDriverLicense, onBattery, onFuel, onParkingTicket, onPaymentSettings }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void; onMarketValue: () => void; onInsurance: () => void; onIPVAAndFines: () => void; onDriverLicense: () => void; onBattery: () => void; onFuel: () => void; onParkingTicket: () => void; onPaymentSettings: () => void }) => {
   const { user, logout } = useAuth();
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
@@ -258,9 +259,15 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
             <Text style={homeStyles.sidebarItemText}>Seguro</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={homeStyles.sidebarItem}>
+          <TouchableOpacity
+            style={homeStyles.sidebarItem}
+            onPress={() => {
+              closeSidebar();
+              onPaymentSettings();
+            }}
+          >
             <Ionicons name="settings-outline" size={24} color="#0055FF" />
-            <Text style={homeStyles.sidebarItemText}>Configurações</Text>
+              <Text style={homeStyles.sidebarItemText}>Configurações de pagamento</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={homeStyles.sidebarItem}>
@@ -649,7 +656,7 @@ const RegisterScreen = ({ onLogin, onRegister }: { onLogin: () => void; onRegist
 
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'viewVehicles' | 'marketValue' | 'insurance' | 'ipvaAndFines' | 'driverLicense' | 'battery' | 'fuel' | 'parkingTicket'>('login');
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'register' | 'home' | 'addVehicle' | 'payment' | 'paymentSettings' | 'viewVehicles' | 'marketValue' | 'insurance' | 'ipvaAndFines' | 'driverLicense' | 'battery' | 'fuel' | 'parkingTicket'>('login');
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [editingVehicleIndex, setEditingVehicleIndex] = useState<number | null>(null);
 
@@ -720,6 +727,14 @@ const AppContent = () => {
   };
 
   const handleBackFromPayment = () => {
+    setCurrentScreen('home');
+  };
+
+  const handlePaymentSettings = () => {
+    setCurrentScreen('paymentSettings');
+  };
+
+  const handleBackFromPaymentSettings = () => {
     setCurrentScreen('home');
   };
 
@@ -812,6 +827,10 @@ const AppContent = () => {
     return <Payment onBack={handleBackFromPayment} />;
   }
 
+  if (currentScreen === 'paymentSettings') {
+    return <PaymentSettings onBack={handleBackFromPaymentSettings} />;
+  }
+
   if (currentScreen === 'viewVehicles') {
     return <ViewVehiclesScreen onBack={handleBackFromVehicles} onAddVehicle={handleAddVehicle} onEditVehicle={handleEditVehicle} vehicles={vehicles} />;
   }
@@ -845,7 +864,7 @@ const AppContent = () => {
   }
 
   if (currentScreen === 'home' && user !== null) {
-    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} onMarketValue={handleMarketValue} onInsurance={handleInsurance} onIPVAAndFines={handleIPVAAndFines} onDriverLicense={handleDriverLicense} onBattery={handleBattery} onFuel={handleFuel} onParkingTicket={handleParkingTicket} />;
+    return <HomeScreen onLogout={handleLogout} onAddVehicle={handleAddVehicle} onPayment={handlePayment} onViewVehicles={handleViewVehicles} onMarketValue={handleMarketValue} onInsurance={handleInsurance} onIPVAAndFines={handleIPVAAndFines} onDriverLicense={handleDriverLicense} onBattery={handleBattery} onFuel={handleFuel} onParkingTicket={handleParkingTicket} onPaymentSettings={handlePaymentSettings} />;
   }
 
   if (currentScreen === 'register') {
