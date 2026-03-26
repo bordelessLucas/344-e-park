@@ -66,6 +66,31 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({
   const placaPatternRegex = /^(?:[0-9][A-Z][0-9]{2}|[0-9]{4})$/;
   const isFormValid = placaLetras.trim().length === 3 && placaPatternRegex.test(placaNumeros) && tipo !== '' && modelo.trim() !== '' && ano !== '';
 
+  const formatInsuranceCompanyInput = (value: string) => {
+    const cleaned = value
+      .replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trimStart();
+    return cleaned.slice(0, 60);
+  };
+
+  const formatInsurancePolicyInput = (value: string) => {
+    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+    const groups = cleaned.match(/.{1,4}/g) || [];
+    return groups.join('-');
+  };
+
+  const formatInsuranceValidUntilInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 4) {
+      return digits;
+    }
+    if (digits.length <= 6) {
+      return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    }
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+  };
+
   useEffect(() => {
     if (!initialVehicle) {
       setPlacaLetras('');
@@ -252,22 +277,29 @@ export const AddVehicle: React.FC<AddVehicleProps> = ({
               placeholder="Nome da seguradora"
               placeholderTextColor="#999"
               value={insuranceCompany}
-              onChangeText={setInsuranceCompany}
+              onChangeText={(text) => setInsuranceCompany(formatInsuranceCompanyInput(text))}
+              autoCapitalize="words"
+              maxLength={60}
             />
             <TextInput
               style={[styles.input, { marginTop: 12 }]}
               placeholder="Número da apólice"
               placeholderTextColor="#999"
               value={insurancePolicy}
-              onChangeText={setInsurancePolicy}
+              onChangeText={(text) => setInsurancePolicy(formatInsurancePolicyInput(text))}
               autoCapitalize="characters"
+              maxLength={19}
             />
             <TextInput
               style={[styles.input, { marginTop: 12 }]}
               placeholder="Validade (AAAA-MM-DD)"
               placeholderTextColor="#999"
               value={insuranceValidUntil}
-              onChangeText={setInsuranceValidUntil}
+              onChangeText={(text) =>
+                setInsuranceValidUntil(formatInsuranceValidUntilInput(text))
+              }
+              keyboardType="number-pad"
+              maxLength={10}
             />
           </View>
         )}

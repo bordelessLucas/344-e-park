@@ -46,6 +46,53 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
 
   const categories: DriverLicenseCategory[] = ['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE'];
 
+  const formatLicenseNumberInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) {
+      return digits;
+    }
+    if (digits.length <= 6) {
+      return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    }
+    if (digits.length <= 9) {
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    }
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+
+  const formatCpfInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) {
+      return digits;
+    }
+    if (digits.length <= 6) {
+      return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    }
+    if (digits.length <= 9) {
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    }
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+
+  const formatDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 4) {
+      return digits;
+    }
+    if (digits.length <= 6) {
+      return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    }
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+  };
+
+  const formatHolderNameInput = (value: string) => {
+    return value
+      .replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trimStart()
+      .slice(0, 80);
+  };
+
   useEffect(() => {
     loadLicenses();
   }, []);
@@ -70,12 +117,12 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
 
   const handleOpenEditModal = (license: DriverLicense) => {
     setEditingLicense(license);
-    setNumber(license.number);
+    setNumber(formatLicenseNumberInput(license.number));
     setCategory(license.category as DriverLicenseCategory);
     setIssueDate(license.issueDate);
     setExpiryDate(license.expiryDate);
     setHolderName(license.holderName);
-    setCpf(license.cpf);
+    setCpf(formatCpfInput(license.cpf));
     setObservations(license.observations || '');
     setShowAddEditModal(true);
   };
@@ -140,28 +187,32 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
   const handleSave = async () => {
     if (!validateForm()) return;
 
+    const normalizedNumber = number.replace(/\D/g, '');
+    const normalizedCpf = cpf.replace(/\D/g, '');
+    const normalizedHolderName = holderName.trim();
+
     try {
       if (editingLicense) {
         // Atualizar CNH existente
         await updateDriverLicense(editingLicense.id, {
-          number,
+          number: normalizedNumber,
           category,
           issueDate,
           expiryDate,
-          holderName,
-          cpf,
+          holderName: normalizedHolderName,
+          cpf: normalizedCpf,
           observations,
         });
         Alert.alert('Sucesso', 'CNH atualizada com sucesso!');
       } else {
         // Adicionar nova CNH
         await saveDriverLicense({
-          number,
+          number: normalizedNumber,
           category,
           issueDate,
           expiryDate,
-          holderName,
-          cpf,
+          holderName: normalizedHolderName,
+          cpf: normalizedCpf,
           observations,
         });
         Alert.alert('Sucesso', 'CNH adicionada com sucesso!');
@@ -397,8 +448,9 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
                   placeholder="Ex: 12345678900"
                   placeholderTextColor="#999"
                   value={number}
-                  onChangeText={setNumber}
+                  onChangeText={(text) => setNumber(formatLicenseNumberInput(text))}
                   keyboardType="numeric"
+                  maxLength={14}
                 />
               </View>
 
@@ -422,8 +474,9 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
                   placeholder="Nome completo"
                   placeholderTextColor="#999"
                   value={holderName}
-                  onChangeText={setHolderName}
+                  onChangeText={(text) => setHolderName(formatHolderNameInput(text))}
                   autoCapitalize="words"
+                  maxLength={80}
                 />
               </View>
 
@@ -434,8 +487,9 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
                   placeholder="000.000.000-00"
                   placeholderTextColor="#999"
                   value={cpf}
-                  onChangeText={setCpf}
+                  onChangeText={(text) => setCpf(formatCpfInput(text))}
                   keyboardType="numeric"
+                  maxLength={14}
                 />
               </View>
 
@@ -446,7 +500,9 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
                   placeholder="AAAA-MM-DD (Ex: 2020-05-15)"
                   placeholderTextColor="#999"
                   value={issueDate}
-                  onChangeText={setIssueDate}
+                  onChangeText={(text) => setIssueDate(formatDateInput(text))}
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
               </View>
 
@@ -457,7 +513,9 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
                   placeholder="AAAA-MM-DD (Ex: 2030-05-15)"
                   placeholderTextColor="#999"
                   value={expiryDate}
-                  onChangeText={setExpiryDate}
+                  onChangeText={(text) => setExpiryDate(formatDateInput(text))}
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
               </View>
 
