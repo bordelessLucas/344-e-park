@@ -106,6 +106,36 @@ const ViewVehiclesScreen = ({ onBack, onAddVehicle, onEditVehicle, vehicles }: {
 };
 
 const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarketValue, onInsurance, onIPVAAndFines, onDriverLicense, onBattery, onFuel, onParkingTicket, onPaymentSettings }: { onLogout: () => void; onAddVehicle: () => void; onPayment: () => void; onViewVehicles: () => void; onMarketValue: () => void; onInsurance: () => void; onIPVAAndFines: () => void; onDriverLicense: () => void; onBattery: () => void; onFuel: () => void; onParkingTicket: () => void; onPaymentSettings: () => void }) => {
+    const [locationStatus, setLocationStatus] = useState<string>('');
+
+    const handleEnableLocation = async () => {
+      try {
+        const { status } = await (await import('expo-location')).requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          setLocationStatus('Localização ativada!');
+        } else {
+          setLocationStatus('Permissão de localização negada.');
+        }
+      } catch (e) {
+        setLocationStatus('Erro ao ativar localização.');
+      }
+    };
+        {/* Botão para ativar localização */}
+        <TouchableOpacity style={{
+          backgroundColor: '#0055FF',
+          padding: 12,
+          borderRadius: 8,
+          margin: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }} onPress={handleEnableLocation}>
+          <Ionicons name="location-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Ativar Localização</Text>
+        </TouchableOpacity>
+        {!!locationStatus && (
+          <Text style={{ color: '#0055FF', textAlign: 'center', marginBottom: 8 }}>{locationStatus}</Text>
+        )}
   const { user, logout } = useAuth();
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
@@ -195,6 +225,21 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
           },
         ]}
       >
+        {/* Botão de fechar destacado no topo da sidebar */}
+        <TouchableOpacity
+          onPress={closeSidebar}
+          style={{
+            alignSelf: 'flex-end',
+            margin: 16,
+            backgroundColor: '#0055FF',
+            borderRadius: 20,
+            padding: 8,
+            elevation: 4,
+            zIndex: 10,
+          }}
+        >
+          <Ionicons name="close" size={28} color="#fff" />
+        </TouchableOpacity>
         <View style={homeStyles.sidebarHeader}>
           <View style={homeStyles.sidebarUserInfo}>
             <View style={homeStyles.sidebarAvatar}>
@@ -209,9 +254,6 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
               </Text>
             </View>
           </View>
-          <TouchableOpacity onPress={closeSidebar} style={homeStyles.sidebarCloseButton}>
-            <Ionicons name="close" size={24} color="#0055FF" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={homeStyles.sidebarContent}>

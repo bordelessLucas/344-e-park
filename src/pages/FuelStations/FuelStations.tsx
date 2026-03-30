@@ -1,4 +1,53 @@
-import React, { useState } from 'react';
+import GasStationsMap from '../../components/GasStationsMap';
+      {/* Mapa dos postos próximos */}
+      {userLocation && nearbyStations.length > 0 && (
+        <GasStationsMap userLocation={userLocation} stations={nearbyStations} />
+      )}
+// ...existing code...
+// Estado para armazenar os postos encontrados pela API
+const [nearbyStations, setNearbyStations] = useState<any[]>([]);
+
+// Buscar postos próximos quando a localização do usuário estiver disponível
+useEffect(() => {
+  if (userLocation) {
+    fetchNearbyGasStations(userLocation.lat, userLocation.lng, 5000).then(setNearbyStations);
+  }
+}, [userLocation]);
+// ...existing code...
+// Estado para localização do usuário
+const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+useEffect(() => {
+  (async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permissão de localização negada.');
+      return;
+    }
+    let location = await Location.getCurrentPositionAsync({});
+    setUserLocation({ lat: location.coords.latitude, lng: location.coords.longitude });
+  })();
+}, []);
+import React, { useState, useEffect } from 'react';
+import * as Location from 'expo-location';
+// Substitua pela sua chave da API do Google Places
+const GOOGLE_PLACES_API_KEY = 'SUA_CHAVE_GOOGLE_PLACES';
+
+// Função utilitária para buscar postos próximos usando Google Places API
+async function fetchNearbyGasStations(lat: number, lng: number, radius: number = 5000) {
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=gas_station&key=${GOOGLE_PLACES_API_KEY}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.status === 'OK') {
+      return data.results;
+    } else {
+      return [];
+    }
+  } catch (error) {
+    return [];
+  }
+}
 import {
   View,
   Text,
