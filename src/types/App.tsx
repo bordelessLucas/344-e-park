@@ -16,6 +16,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '../contexts/AuthContext';
 import { useAuth } from '../hooks/useAuth';
 import { Logo } from '../components/Logo/Logo';
@@ -140,11 +141,78 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [orderedServiceIds, setOrderedServiceIds] = useState<ServiceId[]>([]);
+  const [favoriteServiceIds, setFavoriteServiceIds] = useState<ServiceId[]>([]);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width * 0.8)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
   const cities = ['Porto Alegre', 'Canoas', 'Esteio'];
 
+  const defaultServiceIds = ['ipva', 'insurance', 'fuel', 'battery', 'marketValue', 'driverLicense', 'payment', 'parkingTicket'] as const;
+  type ServiceId = (typeof defaultServiceIds)[number];
+  const storageKey = '@dashboard_last_service_order';
+  const favoritesStorageKey = '@dashboard_favorite_service_ids';
+
+  const serviceMap: Record<ServiceId, { icon: string; title: string; subtitle: string; onPress: () => void; style: any; isParkingImage?: boolean }> = {
+    ipva: {
+      icon: 'document-text-outline',
+      title: 'IPVA, MULTAS',
+      subtitle: '& Licenciamento',
+      onPress: onIPVAAndFines,
+      style: homeStyles.serviceCard,
+    },
+    insurance: {
+      icon: 'shield-checkmark-outline',
+      title: 'SEGURO',
+      subtitle: 'Cotação e contatos',
+      onPress: onInsurance,
+      style: homeStyles.serviceCard,
+    },
+    fuel: {
+      icon: 'flash-outline',
+      title: 'ABASTECER',
+      subtitle: 'Combustível e elétrico',
+      onPress: onFuel,
+      style: homeStyles.serviceCard,
+    },
+    battery: {
+      icon: 'battery-charging-outline',
+      title: 'Baterias Moura',
+      subtitle: 'Entrega em 50 min',
+      onPress: onBattery,
+      style: homeStyles.serviceCard,
+    },
+    marketValue: {
+      icon: 'trending-up-outline',
+      title: 'VALOR',
+      subtitle: 'de mercado',
+      onPress: onMarketValue,
+      style: homeStyles.serviceCard,
+    },
+    driverLicense: {
+      icon: 'person-outline',
+      title: 'CNH Protegida',
+      subtitle: 'Maior controle',
+      onPress: onDriverLicense,
+      style: homeStyles.serviceCard,
+    },
+    payment: {
+      icon: 'card-outline',
+      title: 'Pagar Zona Azul',
+      subtitle: '',
+      onPress: onPayment,
+      style: [homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard],
+    },
+    parkingTicket: {
+      icon: 'car-outline',
+      title: 'Pagar Garagens',
+      subtitle: 'Pagar Tíquete',
+      onPress: onParkingTicket,
+      style: [homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard],
+      isParkingImage: true,
+    },
+  };
   const toggleSidebar = () => {
     if (sidebarOpen) {
       // Fechar sidebar
@@ -177,6 +245,81 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
       ]).start();
     }
   };
+
+  const loadServiceOrder = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((id: string): id is ServiceId => defaultServiceIds.includes(id as ServiceId));
+          const merged: ServiceId[] = [...filtered, ...defaultServiceIds.filter((id) => !filtered.includes(id))];
+          setOrderedServiceIds(merged);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao carregar ordem do dashboard', error);
+    }
+    setOrderedServiceIds([...defaultServiceIds]);
+  };
+
+  const saveServiceOrder = async (newOrder: ServiceId[]) => {
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newOrder));
+    } catch (error) {
+      console.warn('Erro ao salvar ordem do dashboard', error);
+    }
+  };
+
+  const loadFavoriteServices = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(favoritesStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter((id: string): id is ServiceId => defaultServiceIds.includes(id as ServiceId));
+          setFavoriteServiceIds(filtered);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao carregar favoritos do dashboard', error);
+    }
+    setFavoriteServiceIds([]);
+  };
+
+  const saveFavoriteServices = async (newFavorites: ServiceId[]) => {
+    try {
+      await AsyncStorage.setItem(favoritesStorageKey, JSON.stringify(newFavorites));
+    } catch (error) {
+      console.warn('Erro ao salvar favoritos do dashboard', error);
+    }
+  };
+
+  const toggleFavoriteService = (serviceId: ServiceId) => {
+    const nextFavorites = favoriteServiceIds.includes(serviceId)
+      ? favoriteServiceIds.filter((id) => id !== serviceId)
+      : [serviceId, ...favoriteServiceIds];
+    setFavoriteServiceIds(nextFavorites);
+    saveFavoriteServices(nextFavorites);
+  };
+
+  const handleServicePress = (serviceId: ServiceId) => {
+    const service = serviceMap[serviceId];
+
+    const nextOrder: ServiceId[] = [serviceId, ...orderedServiceIds.filter((id) => id !== serviceId)];
+    setOrderedServiceIds(nextOrder);
+    saveServiceOrder(nextOrder);
+
+    service.onPress();
+  };
+
+  React.useEffect(() => {
+    loadServiceOrder();
+    loadFavoriteServices();
+  }, []);
+
 
   const closeSidebar = () => {
     if (sidebarOpen) {
@@ -268,38 +411,48 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
             <Text style={homeStyles.sidebarItemText}>Meus Veículos</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={homeStyles.sidebarItem}
-            onPress={() => {
-              closeSidebar();
-              onPayment();
-            }}
-          >
-            <Ionicons name="card-outline" size={24} color="#0055FF" />
-            <Text style={homeStyles.sidebarItemText}>Pagamentos</Text>
-          </TouchableOpacity>
+          {/* Sidebar services ordenados por uso */}
+          {((orderedServiceIds.length ? orderedServiceIds : defaultServiceIds) as ServiceId[])
+            .filter((id) => ['payment', 'ipva', 'insurance'].includes(id))
+            .map((serviceId) => {
+              const service = serviceMap[serviceId];
+              if (!service) return null;
 
-          <TouchableOpacity
-            style={homeStyles.sidebarItem}
-            onPress={() => {
-              closeSidebar();
-              onIPVAAndFines();
-            }}
-          >
-            <Ionicons name="document-text-outline" size={24} color="#0055FF" />
-            <Text style={homeStyles.sidebarItemText}>IPVA, Multas e Licenciamento</Text>
-          </TouchableOpacity>
+              const labelMap: Record<ServiceId, string> = {
+                ipva: 'IPVA, Multas e Licenciamento',
+                insurance: 'Seguro',
+                fuel: 'Abastecer',
+                battery: 'Baterias Moura',
+                marketValue: 'Valor de Mercado',
+                driverLicense: 'CNH Protegida',
+                payment: 'Pagamentos',
+                parkingTicket: 'Pagar Garagens',
+              };
+              const iconMap: Record<ServiceId, string> = {
+                ipva: 'document-text-outline',
+                insurance: 'shield-checkmark-outline',
+                fuel: 'flash-outline',
+                battery: 'battery-charging-outline',
+                marketValue: 'trending-up-outline',
+                driverLicense: 'person-outline',
+                payment: 'card-outline',
+                parkingTicket: 'car-outline',
+              };
 
-          <TouchableOpacity
-            style={homeStyles.sidebarItem}
-            onPress={() => {
-              closeSidebar();
-              onInsurance();
-            }}
-          >
-            <Ionicons name="shield-checkmark-outline" size={24} color="#0055FF" />
-            <Text style={homeStyles.sidebarItemText}>Seguro</Text>
-          </TouchableOpacity>
+              return (
+                <TouchableOpacity
+                  key={`sidebar-${serviceId}`}
+                  style={homeStyles.sidebarItem}
+                  onPress={() => {
+                    closeSidebar();
+                    handleServicePress(serviceId);
+                  }}
+                >
+                  <Ionicons name={iconMap[serviceId] as any} size={24} color="#0055FF" />
+                  <Text style={homeStyles.sidebarItemText}>{labelMap[serviceId]}</Text>
+                </TouchableOpacity>
+              );
+            })}
 
           <TouchableOpacity
             style={homeStyles.sidebarItem}
@@ -309,7 +462,7 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
             }}
           >
             <Ionicons name="settings-outline" size={24} color="#0055FF" />
-              <Text style={homeStyles.sidebarItemText}>Configurações de pagamento</Text>
+            <Text style={homeStyles.sidebarItemText}>Configurações de pagamento</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={homeStyles.sidebarItem}>
@@ -366,83 +519,80 @@ const HomeScreen = ({ onLogout, onAddVehicle, onPayment, onViewVehicles, onMarke
           </View>
         </TouchableOpacity>
 
-        {/* Services Grid */}
-        <View style={homeStyles.grid}>
-          {/* Row 1 */}
-          <TouchableOpacity style={homeStyles.serviceCard} onPress={onIPVAAndFines}>
-            <View style={homeStyles.serviceIcon}>
-              <Ionicons name="document-text-outline" size={24} color="#0055FF" />
-            </View>
-            <Text style={homeStyles.serviceText}>IPVA, MULTAS</Text>
-            <Text style={homeStyles.serviceSubtext}>& Licenciamento</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={homeStyles.serviceCard} onPress={onInsurance}>
-            <View style={homeStyles.serviceIcon}>
-              <Ionicons name="shield-checkmark-outline" size={24} color="#0055FF" />
-            </View>
-            <Text style={homeStyles.serviceText}>SEGURO</Text>
-            <Text style={homeStyles.serviceSubtext}>Cotação e contatos</Text>
-          </TouchableOpacity>
-
-          {/* Row 2 */}
-          <TouchableOpacity style={homeStyles.serviceCard} onPress={onFuel}>
-            <View style={homeStyles.serviceIcon}>
-              <Ionicons name="flash-outline" size={24} color="#0055FF" />
-            </View>
-            <Text style={homeStyles.serviceText}>ABASTECER</Text>
-            <Text style={homeStyles.serviceSubtext}>Combustível e elétrico</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={homeStyles.serviceCard} onPress={onBattery}>
-            <View style={homeStyles.serviceIcon}>
-              <Ionicons name="battery-charging-outline" size={24} color="#0055FF" />
-            </View>
-            <Text style={homeStyles.serviceText}>Baterias Moura</Text>
-            <Text style={homeStyles.serviceSubtext}>Entrega em 50 min</Text>
-          </TouchableOpacity>
-
-          {/* Row 3 */}
-          <TouchableOpacity style={homeStyles.serviceCard} onPress={onMarketValue}>
-            <View style={homeStyles.serviceIcon}>
-              <Ionicons name="trending-up-outline" size={24} color="#0055FF" />
-            </View>
-            <Text style={homeStyles.serviceText}>VALOR</Text>
-            <Text style={homeStyles.serviceSubtext}>de mercado</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={homeStyles.serviceCard} onPress={onDriverLicense}>
-            <View style={homeStyles.serviceIcon}>
-              <Ionicons name="person-outline" size={24} color="#0055FF" />
-            </View>
-            <Text style={homeStyles.serviceText}>CNH Protegida</Text>
-            <Text style={homeStyles.serviceSubtext}>Maior controle</Text>
-          </TouchableOpacity>
-
-          {/* Row 4 - Pagar Zona Azul e Pagar Garagens */}
-          <TouchableOpacity 
-            style={[homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard]}
-            onPress={onPayment}
+        {/* Serviços */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginTop: 8 }}>
+          <Text style={{ color: '#333', fontWeight: 'bold', fontSize: 16 }}>Serviços</Text>
+          <TouchableOpacity
+            onPress={() => setShowOnlyFavorites((value) => !value)}
+            style={{
+              backgroundColor: showOnlyFavorites ? '#0055FF' : '#F3F3F3',
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#CCC',
+            }}
           >
-            <View style={homeStyles.smallCardIcon}>
-              <Text style={homeStyles.estacionarIconText}>E</Text>
-            </View>
-            <Text style={homeStyles.serviceText}>Pagar Zona Azul</Text>
+            <Text style={{ color: showOnlyFavorites ? '#FFF' : '#333', fontSize: 13 }}>
+              {showOnlyFavorites ? 'Mostrando só favoritos' : 'Mostrar favoritos'}
+            </Text>
           </TouchableOpacity>
+        </View>
 
-          <TouchableOpacity style={[homeStyles.serviceCard, homeStyles.smallCard, homeStyles.strongBlueCard]} onPress={onParkingTicket}>
-            <View style={homeStyles.smallCardIcon}>
-              <Image 
-                source={require('../../assets/Garagem.png')} 
+        <View style={homeStyles.grid}>
+          {(() => {
+            const baseOrder: ServiceId[] = orderedServiceIds.length ? orderedServiceIds : [...defaultServiceIds];
+            const merged = Array.from(new Set([...favoriteServiceIds.filter((id) => baseOrder.includes(id)), ...baseOrder]));
+            return showOnlyFavorites ? merged.filter((id) => favoriteServiceIds.includes(id)) : merged;
+          })().map((serviceId) => {
+            const service = serviceMap[serviceId];
+            if (!service) return null;
+            const cardStyle = service.style;
+
+            const iconArea = service.isParkingImage ? (
+              <Image
+                source={require('../../assets/Garagem.png')}
                 style={homeStyles.garagemImage}
                 resizeMode="contain"
               />
-            </View>
-            <View style={homeStyles.smallCardTextContainer}>
-              <Text style={homeStyles.serviceText}>Pagar Garagens</Text>
-              <Text style={homeStyles.serviceSubtext}>Pagar Tíquete</Text>
-            </View>
-          </TouchableOpacity>
+            ) : (
+              <Ionicons name={service.icon as any} size={24} color="#0055FF" />
+            );
+
+            const isFavorite = favoriteServiceIds.includes(serviceId);
+
+            return (
+              <TouchableOpacity
+                key={serviceId}
+                style={cardStyle}
+                onPress={() => handleServicePress(serviceId)}
+              >
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    zIndex: 9,
+                    backgroundColor: 'rgba(255,255,255,0.85)',
+                    borderRadius: 12,
+                    padding: 4,
+                  }}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    toggleFavoriteService(serviceId);
+                  }}
+                >
+                  <Ionicons name={isFavorite ? 'star' : 'star-outline'} size={18} color={isFavorite ? '#FFD700' : '#0055FF'} />
+                </TouchableOpacity>
+
+                <View style={service.isParkingImage ? homeStyles.smallCardIcon : homeStyles.serviceIcon}>
+                  {iconArea}
+                </View>
+                <Text style={homeStyles.serviceText}>{service.title}</Text>
+                {service.subtitle ? <Text style={homeStyles.serviceSubtext}>{service.subtitle}</Text> : null}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
 
