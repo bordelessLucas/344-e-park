@@ -5,12 +5,12 @@ import { ParkingTicket, TicketPayment } from '../types/parkingTicket';
 
 const STORAGE_KEY = '@epark:parking_tickets';
 
-// Simular busca de ticket por código
+/**
+ * Busca ticket por código. Hoje: demonstração (dados derivados do código).
+ * Produção: integrar com API do shopping/garagem/municipalidade.
+ */
 export async function getTicketByCode(ticketCode: string): Promise<ParkingTicket | null> {
-  // Em produção, isso faria uma chamada à API do estacionamento
-  // Por enquanto, vamos simular com dados mockados
-  
-  // Gerar dados baseados no código do ticket
+  // Gerar dados baseados no código do ticket (simulação)
   const hash = ticketCode.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   
   const types: ParkingTicket['type'][] = ['shopping', 'garage', 'street', 'event', 'airport'];

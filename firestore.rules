@@ -1,0 +1,28 @@
+rules_version = '2';
+// Cole estas regras em Firebase Console → Firestore Database → Regras (projeto e-park-25aa8)
+//
+// Em CREATE não existe `resource`; usar só `request.resource`, senão a gravação é negada.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /vehicles/{docId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    match /addresses/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+

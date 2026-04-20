@@ -1,10 +1,2 @@
-import { paths } from './paths';
-
-export type RootStackParamList = {
-  [paths.home]: undefined;
-  [paths.login]: undefined;
-  [paths.register]: undefined;
-  [paths.menu]: undefined;
-  [paths.payment]: undefined;
-};
-
+export type { RootStackParamList } from '../navigation/types';
+export type { MainStackParamList, MainDrawerParamList } from '../navigation/types';

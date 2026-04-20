@@ -6,4 +6,5 @@ export { PaymentSettings } from './PaymentSettings/PaymentSettings';
 export { MarketValue } from './MarketValue/MarketValue';
 export { Insurance } from './Insurance/Insurance';
 export { IPVAAndFines } from './IPVAAndFines/IPVAAndFines';
+export { Profile } from './Profile/Profile';
 

@@ -10,8 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Logo } from '../../components/Logo/Logo';
 import { useAuth } from '../../hooks/useAuth';
+import { compactIconButton } from '../../theme/touchTargets';
+import { formatCpfInput, cpfDigitsOnly, isValidCpfDigits } from '../../utils/cpfFormat';
 
 interface RegisterProps {
   onLogin: () => void;
@@ -22,13 +25,22 @@ export const Register: React.FC<RegisterProps> = ({ onLogin, onGoToLogin }) => {
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
+    const cpfDigits = cpfDigitsOnly(cpf);
+    if (!name || !email || !cpfDigits || !password || !confirmPassword) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      return;
+    }
+
+    if (!isValidCpfDigits(cpfDigits)) {
+      Alert.alert('Erro', 'CPF inválido. Verifique os dígitos.');
       return;
     }
 
@@ -44,7 +56,7 @@ export const Register: React.FC<RegisterProps> = ({ onLogin, onGoToLogin }) => {
 
     setIsLoading(true);
     try {
-      await register(email, password, name);
+      await register(email, password, name, cpfDigits);
       onLogin();
     } catch (error: any) {
       Alert.alert('Erro', error?.message || 'Erro ao registrar. Tente novamente.');
@@ -97,31 +109,63 @@ export const Register: React.FC<RegisterProps> = ({ onLogin, onGoToLogin }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Senha</Text>
+              <Text style={styles.label}>CPF</Text>
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder="000.000.000-00"
                 placeholderTextColor="#999"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
+                value={cpf}
+                onChangeText={(t) => setCpf(formatCpfInput(t))}
+                keyboardType="number-pad"
                 autoCorrect={false}
+                maxLength={14}
               />
             </View>
 
             <View style={styles.inputContainer}>
+              <Text style={styles.label}>Senha</Text>
+              <View style={styles.passwordField}>
+                <TextInput
+                  style={styles.inputPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor="#999"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword((v) => !v)}
+                  accessibilityLabel={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
               <Text style={styles.label}>Confirmar Senha</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor="#999"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <View style={styles.passwordField}>
+                <TextInput
+                  style={styles.inputPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor="#999"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  accessibilityLabel={showConfirmPassword ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+                >
+                  <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#666" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity 
@@ -196,6 +240,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     backgroundColor: '#FAFAFA',
+  },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    backgroundColor: '#FAFAFA',
+  },
+  inputPassword: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#333',
+  },
+  eyeButton: {
+    ...compactIconButton,
+    paddingHorizontal: 8,
   },
   button: {
     backgroundColor: '#0055FF',

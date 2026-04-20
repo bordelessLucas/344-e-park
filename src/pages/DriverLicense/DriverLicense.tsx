@@ -12,7 +12,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { headerIconButton } from '../../theme/touchTargets';
 import { DriverLicense, DriverLicenseCategory } from '../../types/driverLicense';
 import {
   getAllDriverLicenses,
@@ -29,6 +31,7 @@ interface DriverLicensePageProps {
 const { width } = Dimensions.get('window');
 
 export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) => {
+  const insets = useSafeAreaInsets();
   const [licenses, setLicenses] = useState<DriverLicense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddEditModal, setShowAddEditModal] = useState(false);
@@ -417,8 +420,18 @@ export const DriverLicensePage: React.FC<DriverLicensePageProps> = ({ onBack }) 
         </ScrollView>
       )}
 
-      {/* Add Button */}
-      <TouchableOpacity style={styles.addButton} onPress={handleOpenAddModal}>
+      {/* Add Button — mais afastado da base e da direita + safe area */}
+      <TouchableOpacity
+        style={[
+          styles.addButton,
+          {
+            bottom: Math.max(40, insets.bottom + 36),
+            right: Math.max(32, insets.right + 28),
+          },
+        ]}
+        onPress={handleOpenAddModal}
+        accessibilityLabel="Adicionar CNH"
+      >
         <Ionicons name="add" size={28} color="#FFF" />
       </TouchableOpacity>
 
@@ -596,7 +609,7 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   backButton: {
-    padding: 4,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 20,
@@ -798,8 +811,6 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
     width: 56,
     height: 56,
     borderRadius: 28,

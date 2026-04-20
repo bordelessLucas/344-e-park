@@ -12,8 +12,15 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { headerIconButton } from '../../theme/touchTargets';
 import { VehicleData } from '../AddVehicle/AddVehicle';
-import { getVehicleRecord, Fine, IPVAInfo, LicensingInfo, VehicleRecord } from '../../services/vehicleInfoService';
+import {
+  getVehicleRecord,
+  type Fine,
+  type IPVAInfo,
+  type LicensingInfo,
+  type VehicleRecord,
+} from '../../services/vehicleInfoService';
 
 interface IPVAAndFinesProps {
   onBack: () => void;
@@ -24,6 +31,7 @@ export const IPVAAndFines: React.FC<IPVAAndFinesProps> = ({ onBack, vehicles = [
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleData | null>(null);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [vehicleRecord, setVehicleRecord] = useState<VehicleRecord | null>(null);
+  const [dataSource, setDataSource] = useState<'api' | 'mock' | 'hybrid' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'fines' | 'ipva' | 'licensing'>('overview');
 
@@ -37,11 +45,13 @@ export const IPVAAndFines: React.FC<IPVAAndFinesProps> = ({ onBack, vehicles = [
     setIsLoading(true);
     setActiveTab('overview');
     try {
-      const record = await getVehicleRecord(vehicle.placa, vehicle.ano);
+      const { record, source } = await getVehicleRecord(vehicle);
       setVehicleRecord(record);
+      setDataSource(source);
     } catch (error) {
       Alert.alert('Erro', 'Erro ao buscar dados do veículo');
       setVehicleRecord(null);
+      setDataSource(null);
     } finally {
       setIsLoading(false);
     }
@@ -140,6 +150,11 @@ export const IPVAAndFines: React.FC<IPVAAndFinesProps> = ({ onBack, vehicles = [
           <Text style={styles.infoText}>
             Verifique informações de IPVA, multas de trânsito e situação do licenciamento do seu veículo.
           </Text>
+          <Text style={styles.infoFootnote}>
+            Alguns dados são estimados ou simulados para fins informativos. Não substitui consulta oficial em DETRAN,
+            SEFAZ ou órgãos competentes. Opcionalmente, configure EXPO_PUBLIC_VEHICLE_INFO_API_BASE para receber JSON do
+            seu backend.
+          </Text>
         </View>
 
         {/* Vehicle Selector */}
@@ -191,6 +206,58 @@ export const IPVAAndFines: React.FC<IPVAAndFinesProps> = ({ onBack, vehicles = [
         {/* Results */}
         {vehicleRecord && !isLoading && (
           <>
+            {dataSource === 'mock' ? (
+              <View style={styles.sourceBannerMock}>
+                <Ionicons name="information-circle-outline" size={22} color="#B87A00" style={styles.sourceBannerIcon} />
+                <Text style={styles.sourceBannerMockText}>
+                  Modo demonstração: valores ilustrativos (mesma placa → mesmos dados). Não substitui consulta oficial
+                  nem débitos reais.
+                </Text>
+              </View>
+            ) : dataSource === 'hybrid' ? (
+              <View style={styles.sourceBannerHybrid}>
+                <Ionicons name="analytics-outline" size={22} color="#1565C0" style={styles.sourceBannerIcon} />
+                <Text style={styles.sourceBannerHybridText}>
+                  Dados parciais: veículo e valor FIPE vêm de APIs públicas quando disponíveis; IPVA é estimado; multas e
+                  licenciamento são simulados de forma determinística (mesma placa → mesmos resultados).
+                </Text>
+              </View>
+            ) : dataSource === 'api' ? (
+              <View style={styles.sourceBannerApi}>
+                <Ionicons name="cloud-done-outline" size={22} color="#2E7D32" style={styles.sourceBannerIcon} />
+                <Text style={styles.sourceBannerApiText}>
+                  Dados recebidos do seu servidor (API configurada). Confira sempre no portal do DETRAN/SEFAZ do seu
+                  estado.
+                </Text>
+              </View>
+            ) : null}
+
+            {(vehicleRecord.vehicle || vehicleRecord.fipeValue != null) && (
+              <View style={styles.vehicleMetaCard}>
+                <Text style={styles.vehicleMetaTitle}>Dados do veículo (referência)</Text>
+                {vehicleRecord.vehicle && (
+                  <>
+                    <Text style={styles.vehicleMetaLine}>
+                      {vehicleRecord.vehicle.brand} {vehicleRecord.vehicle.model} · {vehicleRecord.vehicle.year}
+                    </Text>
+                    <Text style={styles.vehicleMetaSub}>
+                      Combustível: {vehicleRecord.vehicle.fuel}
+                      {vehicleRecord.vehicle.dataOrigin === 'api'
+                        ? ' · origem: consulta pública'
+                        : vehicleRecord.vehicle.dataOrigin === 'cadastro'
+                        ? ' · origem: cadastro'
+                        : ''}
+                    </Text>
+                  </>
+                )}
+                {vehicleRecord.fipeValue != null && (
+                  <Text style={styles.vehicleMetaFipe}>
+                    Valor FIPE (referência): {formatCurrency(vehicleRecord.fipeValue)}
+                  </Text>
+                )}
+              </View>
+            )}
+
             {/* Summary Cards */}
             <View style={styles.summaryGrid}>
               {/* Multas Pendentes */}
@@ -564,8 +631,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgb(215, 239, 253)',
   },
   backButton: {
-    padding: 8,
-    width: 40,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 16,
@@ -612,6 +678,99 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  infoFootnote: {
+    fontSize: 12,
+    color: '#78909C',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 14,
+  },
+  sourceBannerIcon: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  sourceBannerMock: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 14,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
+  sourceBannerMockText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#5D4037',
+    lineHeight: 19,
+  },
+  sourceBannerApi: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 14,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  sourceBannerApiText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1B5E20',
+    lineHeight: 19,
+  },
+  sourceBannerHybrid: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 14,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#90CAF9',
+  },
+  sourceBannerHybridText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#0D47A1',
+    lineHeight: 19,
+  },
+  vehicleMetaCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E3F2FD',
+  },
+  vehicleMetaTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0055FF',
+    marginBottom: 8,
+  },
+  vehicleMetaLine: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '600',
+  },
+  vehicleMetaSub: {
+    fontSize: 12,
+    color: '#78909C',
+    marginTop: 4,
+  },
+  vehicleMetaFipe: {
+    fontSize: 14,
+    color: '#1565C0',
+    fontWeight: '700',
+    marginTop: 10,
   },
   section: {
     paddingHorizontal: 20,

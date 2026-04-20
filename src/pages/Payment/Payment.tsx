@@ -15,6 +15,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, Camera, BarcodeScanningResult } from 'expo-camera';
 import { useAuth } from '../../hooks/useAuth';
+import { useVehicles } from '../../contexts/VehiclesContext';
+import { addParkingHistoryEntry } from '../../services/parkingHistoryService';
+import { headerIconButton } from '../../theme/touchTargets';
 import {
   createPaymentMethod,
   deletePaymentMethod,
@@ -55,6 +58,7 @@ interface TicketData {
 
 export const Payment: React.FC<PaymentProps> = ({ onBack }) => {
   const { user } = useAuth();
+  const { vehicles: vehicleList } = useVehicles();
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
@@ -83,10 +87,16 @@ export const Payment: React.FC<PaymentProps> = ({ onBack }) => {
   const [newMethodExpiresAt, setNewMethodExpiresAt] = useState('');
   const [newMethodPixKey, setNewMethodPixKey] = useState('');
 
-  const vehicles: Vehicle[] = [
-    { id: '1', placa: 'ABC-1234', modelo: 'Honda Civic', tipo: 'Carro' },
-    { id: '2', placa: 'XYZ-5678', modelo: 'Yamaha MT-03', tipo: 'Motocicleta' },
-  ];
+  const vehicles: Vehicle[] = useMemo(
+    () =>
+      vehicleList.map((v, idx) => ({
+        id: `${v.placa}_${idx}`,
+        placa: v.placa,
+        modelo: v.modelo,
+        tipo: v.tipo,
+      })),
+    [vehicleList]
+  );
 
   const loadPaymentMethods = async (preferredMethodId?: string) => {
     if (!user?.uid) {
@@ -434,6 +444,23 @@ export const Payment: React.FC<PaymentProps> = ({ onBack }) => {
 
     setPaymentConfirmed(true);
     setIsProcessing(false);
+
+    if (user?.uid && ticketData && selectedVehicle && selectedPaymentMethod) {
+      try {
+        await addParkingHistoryEntry(user.uid, {
+          createdAt: new Date().toISOString(),
+          ticketNumber: ticketData.ticketNumber,
+          location: ticketData.location,
+          street: ticketData.street,
+          value: ticketData.value,
+          vehiclePlate: selectedVehicle.placa,
+          vehicleModel: selectedVehicle.modelo,
+          paymentMethodLabel: `${selectedPaymentMethod.nickname} (${getMethodTypeLabel(selectedPaymentMethod.type)})`,
+        });
+      } catch {
+        /* histórico é opcional */
+      }
+    }
 
     if (!paymentPreferences.notifyAfterPayment) {
       finishPaymentFlow();
@@ -1084,8 +1111,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   backButton: {
-    padding: 8,
-    width: 40,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 18,

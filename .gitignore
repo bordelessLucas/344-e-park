@@ -1,4 +1,5 @@
 node_modules
+.expo/
 .env
 CHECKLIST_ADD_VEHICLE.txt
 CHECKLIST_SESSION_COMPLETE.txt

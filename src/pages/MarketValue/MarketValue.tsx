@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { headerIconButton } from '../../theme/touchTargets';
 import { VehicleData } from '../AddVehicle/AddVehicle';
 
 interface MarketValueProps {
@@ -621,8 +622,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgb(215, 239, 253)',
   },
   backButton: {
-    padding: 8,
-    width: 40,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 20,

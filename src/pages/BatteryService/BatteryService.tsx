@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { headerIconButton } from '../../theme/touchTargets';
 import { VehicleData } from '../AddVehicle/AddVehicle';
 import { BatteryProduct, BatteryOrder } from '../../types/battery';
 import {
   MOURA_BATTERIES,
+  fetchBatteryCatalog,
   saveBatteryOrder,
   getAllBatteryOrders,
   calculateDeliveryTime,
@@ -40,6 +42,7 @@ export const BatteryService: React.FC<BatteryServiceProps> = ({ onBack, vehicles
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showMyOrders, setShowMyOrders] = useState(false);
   const [myOrders, setMyOrders] = useState<BatteryOrder[]>([]);
+  const [batteryCatalog, setBatteryCatalog] = useState<BatteryProduct[]>(MOURA_BATTERIES);
 
   // Form fields
   const [customerName, setCustomerName] = useState('');
@@ -50,16 +53,26 @@ export const BatteryService: React.FC<BatteryServiceProps> = ({ onBack, vehicles
     loadOrders();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchBatteryCatalog().then((list) => {
+      if (!cancelled && list.length > 0) {
+        setBatteryCatalog(list);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const loadOrders = async () => {
     const orders = await getAllBatteryOrders();
     setMyOrders(orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()));
   };
 
   const getFilteredBatteries = (): BatteryProduct[] => {
-    if (!selectedVehicle) return MOURA_BATTERIES;
-    return MOURA_BATTERIES.filter(battery => 
-      battery.vehicleTypes.includes(selectedVehicle.tipo)
-    );
+    if (!selectedVehicle) return batteryCatalog;
+    return batteryCatalog.filter((battery) => battery.vehicleTypes.includes(selectedVehicle.tipo));
   };
 
   const handleSelectBattery = (battery: BatteryProduct) => {
@@ -210,9 +223,10 @@ export const BatteryService: React.FC<BatteryServiceProps> = ({ onBack, vehicles
             <Ionicons name="battery-charging" size={32} color="#0055FF" />
           </View>
           <Text style={styles.infoTitle}>Baterias Moura</Text>
-          <Text style={styles.infoSubtitle}>Entrega em 50 min</Text>
+          <Text style={styles.infoSubtitle}>Entrega estimada em ~50 min</Text>
           <Text style={styles.infoText}>
-            Baterias de qualidade entregues rapidamente no conforto da sua casa ou trabalho.
+            Baterias de qualidade entregues rapidamente no conforto da sua casa ou trabalho. Preços de referência de
+            varejo — confirme no site ou loja autorizada.
           </Text>
         </View>
 
@@ -576,7 +590,7 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   backButton: {
-    padding: 4,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 20,
@@ -584,7 +598,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   ordersButton: {
-    padding: 4,
+    ...headerIconButton,
   },
   scrollView: {
     flex: 1,

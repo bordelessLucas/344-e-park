@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
+import { headerIconButton } from '../../theme/touchTargets';
 import {
   createPaymentMethod,
   deletePaymentMethod,
@@ -450,10 +451,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F8FF',
   },
   backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 18,

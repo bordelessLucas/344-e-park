@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { compactIconButton, headerIconButton } from '../../theme/touchTargets';
 import { VehicleData } from '../AddVehicle/AddVehicle';
 
 interface InsuranceProps {
@@ -418,8 +419,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgb(215, 239, 253)',
   },
   backButton: {
-    padding: 8,
-    width: 40,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 20,
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   detailsButton: {
-    padding: 8,
+    ...compactIconButton,
   },
   tipsCard: {
     backgroundColor: '#FFFFFF',

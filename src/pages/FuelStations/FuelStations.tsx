@@ -1,53 +1,5 @@
-import GasStationsMap from '../../components/GasStationsMap';
-      {/* Mapa dos postos próximos */}
-      {userLocation && nearbyStations.length > 0 && (
-        <GasStationsMap userLocation={userLocation} stations={nearbyStations} />
-      )}
-// ...existing code...
-// Estado para armazenar os postos encontrados pela API
-const [nearbyStations, setNearbyStations] = useState<any[]>([]);
-
-// Buscar postos próximos quando a localização do usuário estiver disponível
-useEffect(() => {
-  if (userLocation) {
-    fetchNearbyGasStations(userLocation.lat, userLocation.lng, 5000).then(setNearbyStations);
-  }
-}, [userLocation]);
-// ...existing code...
-// Estado para localização do usuário
-const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-
-useEffect(() => {
-  (async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permissão de localização negada.');
-      return;
-    }
-    let location = await Location.getCurrentPositionAsync({});
-    setUserLocation({ lat: location.coords.latitude, lng: location.coords.longitude });
-  })();
-}, []);
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as Location from 'expo-location';
-// Substitua pela sua chave da API do Google Places
-const GOOGLE_PLACES_API_KEY = 'SUA_CHAVE_GOOGLE_PLACES';
-
-// Função utilitária para buscar postos próximos usando Google Places API
-async function fetchNearbyGasStations(lat: number, lng: number, radius: number = 5000) {
-  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=gas_station&key=${GOOGLE_PLACES_API_KEY}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    if (data.status === 'OK') {
-      return data.results;
-    } else {
-      return [];
-    }
-  } catch (error) {
-    return [];
-  }
-}
 import {
   View,
   Text,
@@ -60,8 +12,18 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import GasStationsMap from '../../components/GasStationsMap';
 import { FuelStation, StationType } from '../../types/fuelStation';
-import { FUEL_STATIONS, getStationsByCity, getStationsByType } from '../../services/fuelStationService';
+import { getStationsByCity } from '../../services/fuelStationService';
+import {
+  fetchRegionalFuelPrices,
+  applyRegionalPricesToStation,
+  type RegionalFuelPrices,
+} from '../../services/fuelPriceApiService';
+import { applyChargingPriceEstimate } from '../../services/evChargingPriceReference';
+import { fetchNearbyMapStations, type NearbyMapStation } from '../../services/nearbyMapPlacesService';
+import { fetchPhotonReverseGeocode } from '../../services/geocodingService';
+import { headerIconButton } from '../../theme/touchTargets';
 
 interface FuelStationsProps {
   onBack: () => void;
@@ -76,6 +38,66 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [selectedStation, setSelectedStation] = useState<FuelStation | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyStations, setNearbyStations] = useState<NearbyMapStation[]>([]);
+  const [nearbyMapSource, setNearbyMapSource] = useState<'google' | 'osm' | null>(null);
+  const [userAreaLabel, setUserAreaLabel] = useState<string | null>(null);
+  const [regionalPrices, setRegionalPrices] = useState<RegionalFuelPrices | null>(null);
+  const [pricesLoading, setPricesLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+      });
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!userLocation) {
+      return;
+    }
+    let cancelled = false;
+    fetchNearbyMapStations(userLocation.lat, userLocation.lng, 5000).then(({ stations, source }) => {
+      if (!cancelled) {
+        setNearbyStations(stations);
+        setNearbyMapSource(source);
+      }
+    });
+    fetchPhotonReverseGeocode(userLocation.lat, userLocation.lng).then((geo) => {
+      if (!cancelled && geo?.label) {
+        setUserAreaLabel(geo.label);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userLocation]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPricesLoading(true);
+    fetchRegionalFuelPrices(selectedCity)
+      .then((data) => {
+        if (!cancelled) {
+          setRegionalPrices(data);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPricesLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCity]);
 
   const cities: Array<'Porto Alegre' | 'Canoas' | 'Esteio'> = ['Porto Alegre', 'Canoas', 'Esteio'];
 
@@ -90,6 +112,14 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
     
     return stations;
   };
+
+  const stationsWithLivePrices = useMemo(() => {
+    return getFilteredStations().map((station) => {
+      const base = applyRegionalPricesToStation(station, regionalPrices) ?? station.prices;
+      const prices = applyChargingPriceEstimate(station, base);
+      return { ...station, prices };
+    });
+  }, [selectedCity, selectedType, regionalPrices]);
 
   const openInMaps = (station: FuelStation) => {
     const { lat, lng } = station.coordinates;
@@ -166,7 +196,40 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
         <Text style={styles.infoText}>
           Encontre postos de gasolina e pontos de carregamento elétrico próximos a você.
         </Text>
+        {pricesLoading ? (
+          <Text style={styles.apiInfoText}>Carregando valores aproximados…</Text>
+        ) : regionalPrices ? (
+          <Text style={styles.apiInfoText}>
+            Valores aproximados. Combustíveis: média estadual UF {regionalPrices.uf.toUpperCase()} —{' '}
+            {regionalPrices.sourceLabel}. Coleta: {regionalPrices.collectedAt}.{' '}
+            {regionalPrices.ethanolEstimated
+              ? 'Etanol: estimativa regional a partir da gasolina (proporção típica de mercado). '
+              : 'Etanol: valor informado pela API. '}
+            Elétrico (kWh): referência por potência do carregador (faixa típica de mercado no Brasil), não é a tarifa
+            exata da operadora.
+          </Text>
+        ) : (
+          <Text style={styles.apiInfoTextMuted}>
+            Valores aproximados. Médias de combustível indisponíveis; elétrico usa referência por potência. Não substituem
+            preços no local.
+          </Text>
+        )}
       </View>
+
+      {userLocation && nearbyStations.length > 0 && (
+        <View style={styles.mapSection}>
+          {userAreaLabel ? <Text style={styles.mapAreaHint}>Região aproximada: {userAreaLabel}</Text> : null}
+          {nearbyMapSource ? (
+            <Text style={styles.mapSourceHint}>
+              Pontos no mapa:{' '}
+              {nearbyMapSource === 'google'
+                ? 'Google Places (postos + recarga elétrica)'
+                : 'OpenStreetMap via Overpass (espelhos públicos — nomes/endereços podem variar)'}
+            </Text>
+          ) : null}
+          <GasStationsMap userLocation={userLocation} stations={nearbyStations} />
+        </View>
+      )}
 
       {/* Filters */}
       <View style={styles.filtersContainer}>
@@ -196,10 +259,11 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
       {/* Stations List */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <Text style={styles.resultsText}>
-          {getFilteredStations().length} {getFilteredStations().length === 1 ? 'local encontrado' : 'locais encontrados'}
+          {stationsWithLivePrices.length}{' '}
+          {stationsWithLivePrices.length === 1 ? 'local encontrado' : 'locais encontrados'}
         </Text>
 
-        {getFilteredStations().map((station) => (
+        {stationsWithLivePrices.map((station) => (
           <TouchableOpacity
             key={station.id}
             style={styles.stationCard}
@@ -244,16 +308,20 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
 
             {/* Prices */}
             {station.prices && (
-              <View style={styles.pricesContainer}>
+              <View style={styles.pricesWrapper}>
+                <Text style={styles.priceApproxHint}>Valores aproximados</Text>
+                <View style={styles.pricesContainer}>
                 {station.prices.gasoline && (
                   <View style={styles.priceItem}>
                     <Text style={styles.priceLabel}>Gasolina</Text>
                     <Text style={styles.priceValue}>R$ {station.prices.gasoline.toFixed(2)}</Text>
                   </View>
                 )}
-                {station.prices.ethanol && (
+                {station.prices.ethanol != null && (
                   <View style={styles.priceItem}>
-                    <Text style={styles.priceLabel}>Etanol</Text>
+                    <Text style={styles.priceLabel}>
+                      Etanol{regionalPrices?.ethanolEstimated ? ' (est.)' : ''}
+                    </Text>
                     <Text style={styles.priceValue}>R$ {station.prices.ethanol.toFixed(2)}</Text>
                   </View>
                 )}
@@ -265,10 +333,11 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
                 )}
                 {station.prices.charging && (
                   <View style={styles.priceItem}>
-                    <Text style={styles.priceLabel}>kWh</Text>
+                    <Text style={styles.priceLabel}>kWh (ref. mercado)</Text>
                     <Text style={styles.priceValue}>R$ {station.prices.charging.toFixed(2)}</Text>
                   </View>
                 )}
+                </View>
               </View>
             )}
 
@@ -282,7 +351,7 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
           </TouchableOpacity>
         ))}
 
-        {getFilteredStations().length === 0 && (
+        {stationsWithLivePrices.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="search-outline" size={64} color="#CCC" />
             <Text style={styles.emptyTitle}>Nenhum local encontrado</Text>
@@ -429,6 +498,7 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
                 {selectedStation.prices && (
                   <View style={styles.detailSection}>
                     <Text style={styles.detailSectionTitle}>Preços</Text>
+                    <Text style={styles.priceApproxHint}>Valores aproximados</Text>
                     <View style={styles.pricesGrid}>
                       {selectedStation.prices.gasoline && (
                         <View style={styles.priceDetailItem}>
@@ -436,9 +506,11 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
                           <Text style={styles.priceDetailValue}>R$ {selectedStation.prices.gasoline.toFixed(2)}/L</Text>
                         </View>
                       )}
-                      {selectedStation.prices.ethanol && (
+                      {selectedStation.prices.ethanol != null && (
                         <View style={styles.priceDetailItem}>
-                          <Text style={styles.priceDetailLabel}>Etanol</Text>
+                          <Text style={styles.priceDetailLabel}>
+                            Etanol{regionalPrices?.ethanolEstimated ? ' (est.)' : ''}
+                          </Text>
                           <Text style={styles.priceDetailValue}>R$ {selectedStation.prices.ethanol.toFixed(2)}/L</Text>
                         </View>
                       )}
@@ -450,7 +522,7 @@ export const FuelStations: React.FC<FuelStationsProps> = ({ onBack }) => {
                       )}
                       {selectedStation.prices.charging && (
                         <View style={styles.priceDetailItem}>
-                          <Text style={styles.priceDetailLabel}>Elétrico</Text>
+                          <Text style={styles.priceDetailLabel}>Elétrico (ref. mercado)</Text>
                           <Text style={styles.priceDetailValue}>R$ {selectedStation.prices.charging.toFixed(2)}/kWh</Text>
                         </View>
                       )}
@@ -499,7 +571,7 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   backButton: {
-    padding: 4,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 20,
@@ -507,7 +579,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   placeholder: {
-    width: 32,
+    width: 48,
   },
   infoCard: {
     backgroundColor: '#FFF',
@@ -545,6 +617,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  apiInfoText: {
+    fontSize: 12,
+    color: '#2E7D32',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  apiInfoTextMuted: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  mapSection: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  mapSourceHint: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  mapAreaHint: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
   filtersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -556,8 +658,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
+    minHeight: 48,
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -647,11 +750,19 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
+  pricesWrapper: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  priceApproxHint: {
+    fontSize: 11,
+    color: '#888',
+    marginBottom: 6,
+  },
   pricesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
   },
   priceItem: {
     backgroundColor: '#F5F5F5',

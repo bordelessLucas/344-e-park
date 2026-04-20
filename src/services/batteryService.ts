@@ -1,11 +1,15 @@
 // Serviço para gerenciar pedidos de baterias Moura
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBatteryCatalogUrl } from '../config/appConfig';
 import { BatteryProduct, BatteryOrder } from '../types/battery';
 
 const STORAGE_KEY = '@epark:battery_orders';
 
-// Catálogo de baterias Moura disponíveis
+/**
+ * Preços de referência de varejo (faixa típica BR); confirme no site ou loja.
+ * Catálogo remoto opcional: EXPO_PUBLIC_BATTERY_CATALOG_URL ou extra.batteryCatalogUrl.
+ */
 export const MOURA_BATTERIES: BatteryProduct[] = [
   {
     id: 'moura-60ah',
@@ -13,7 +17,7 @@ export const MOURA_BATTERIES: BatteryProduct[] = [
     model: 'M60GD',
     amperage: '60Ah',
     voltage: '12V',
-    price: 489.90,
+    price: 529.0,
     warranty: '24 meses',
     vehicleTypes: ['Carro'],
     description: 'Bateria ideal para carros de pequeno e médio porte. Livre de manutenção.',
@@ -24,7 +28,7 @@ export const MOURA_BATTERIES: BatteryProduct[] = [
     model: 'M70KD',
     amperage: '70Ah',
     voltage: '12V',
-    price: 589.90,
+    price: 639.0,
     warranty: '24 meses',
     vehicleTypes: ['Carro'],
     description: 'Bateria para carros médios e grandes. Maior capacidade de partida.',
@@ -35,7 +39,7 @@ export const MOURA_BATTERIES: BatteryProduct[] = [
     model: 'M45FD',
     amperage: '45Ah',
     voltage: '12V',
-    price: 389.90,
+    price: 449.0,
     warranty: '18 meses',
     vehicleTypes: ['Carro'],
     description: 'Bateria compacta para carros pequenos e econômicos.',
@@ -46,7 +50,7 @@ export const MOURA_BATTERIES: BatteryProduct[] = [
     model: 'M100TD',
     amperage: '100Ah',
     voltage: '12V',
-    price: 789.90,
+    price: 869.0,
     warranty: '30 meses',
     vehicleTypes: ['Caminhonete', 'Van'],
     description: 'Bateria de alta capacidade para veículos pesados e com muitos acessórios.',
@@ -57,7 +61,7 @@ export const MOURA_BATTERIES: BatteryProduct[] = [
     model: 'MA5-D',
     amperage: '5Ah',
     voltage: '12V',
-    price: 189.90,
+    price: 209.0,
     warranty: '12 meses',
     vehicleTypes: ['Motocicleta'],
     description: 'Bateria específica para motocicletas de pequeno porte.',
@@ -68,12 +72,41 @@ export const MOURA_BATTERIES: BatteryProduct[] = [
     model: 'MA8-E',
     amperage: '8Ah',
     voltage: '12V',
-    price: 249.90,
+    price: 279.0,
     warranty: '12 meses',
     vehicleTypes: ['Motocicleta'],
     description: 'Bateria para motocicletas de médio e grande porte.',
   },
 ];
+
+/** Carrega catálogo remoto (JSON array BatteryProduct[]) se configurado; senão embutido. */
+export async function fetchBatteryCatalog(): Promise<BatteryProduct[]> {
+  const url = getBatteryCatalogUrl();
+  if (!url) {
+    return MOURA_BATTERIES;
+  }
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) {
+      return MOURA_BATTERIES;
+    }
+    const data = (await res.json()) as unknown;
+    if (!Array.isArray(data) || data.length === 0) {
+      return MOURA_BATTERIES;
+    }
+    const first = data[0] as Record<string, unknown>;
+    if (
+      typeof first.id === 'string' &&
+      typeof first.name === 'string' &&
+      typeof first.price === 'number'
+    ) {
+      return data as BatteryProduct[];
+    }
+  } catch {
+    // rede / JSON inválido
+  }
+  return MOURA_BATTERIES;
+}
 
 // Salvar pedido
 export async function saveBatteryOrder(order: Omit<BatteryOrder, 'id' | 'orderDate' | 'status'>): Promise<BatteryOrder> {
@@ -130,11 +163,9 @@ export async function cancelBatteryOrder(orderId: string): Promise<boolean> {
   return updateOrderStatus(orderId, 'cancelled');
 }
 
-// Calcular tempo estimado de entrega
+/** Estimativa fixa (sem aleatório); ajuste conforme logística real. */
 export function calculateDeliveryTime(): string {
-  const baseTime = 40; // minutos base
-  const variation = Math.floor(Math.random() * 20); // variação de 0-20 min
-  return `${baseTime + variation} minutos`;
+  return '50 minutos (estimativa)';
 }
 
 // Link para o site da Moura (caso o usuário queira mais informações)

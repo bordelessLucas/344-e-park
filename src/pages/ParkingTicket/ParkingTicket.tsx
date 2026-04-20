@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { headerIconButton } from '../../theme/touchTargets';
 import { ParkingTicket, TicketPayment } from '../../types/parkingTicket';
 import {
   getTicketByCode,
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   backButton: {
-    padding: 4,
+    ...headerIconButton,
   },
   headerTitle: {
     fontSize: 20,
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   historyButton: {
-    padding: 4,
+    ...headerIconButton,
   },
   scrollView: {
     flex: 1,

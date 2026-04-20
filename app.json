@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "epark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -26,7 +27,18 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O app acessa suas fotos para você escolher uma imagem de perfil."
+        }
+      ],
+      "expo-font"
+    ],
     "extra": {
+      "googlePlacesApiKey": "",
+      "batteryCatalogUrl": "",
       "firebaseApiKey": "AIzaSyAJYVi3fK6aSc1p9YOwS80PqEo030sAS9Y",
       "firebaseAuthDomain": "epark-aeffb.firebaseapp.com",
       "firebaseProjectId": "epark-aeffb",
