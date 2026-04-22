@@ -150,11 +150,6 @@ export const IPVAAndFines: React.FC<IPVAAndFinesProps> = ({ onBack, vehicles = [
           <Text style={styles.infoText}>
             Verifique informações de IPVA, multas de trânsito e situação do licenciamento do seu veículo.
           </Text>
-          <Text style={styles.infoFootnote}>
-            Alguns dados são estimados ou simulados para fins informativos. Não substitui consulta oficial em DETRAN,
-            SEFAZ ou órgãos competentes. Opcionalmente, configure EXPO_PUBLIC_VEHICLE_INFO_API_BASE para receber JSON do
-            seu backend.
-          </Text>
         </View>
 
         {/* Vehicle Selector */}
@@ -678,13 +673,6 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
-  },
-  infoFootnote: {
-    fontSize: 12,
-    color: '#78909C',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: 14,
   },
   sourceBannerIcon: {
     marginRight: 10,

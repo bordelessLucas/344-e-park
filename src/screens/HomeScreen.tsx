@@ -19,7 +19,6 @@ import { homeStyles } from './dashboardStyles';
 
 const defaultServiceIds = ['ipva', 'insurance', 'fuel', 'battery', 'marketValue', 'driverLicense', 'payment', 'parkingTicket'] as const;
 type ServiceId = (typeof defaultServiceIds)[number];
-const storageKey = '@dashboard_last_service_order';
 const favoritesStorageKey = '@dashboard_favorite_service_ids';
 
 export const HomeScreen: React.FC = () => {
@@ -45,7 +44,6 @@ export const HomeScreen: React.FC = () => {
 
   const [selectedCity, setSelectedCity] = useState('Porto Alegre');
   const [showCityModal, setShowCityModal] = useState(false);
-  const [orderedServiceIds, setOrderedServiceIds] = useState<ServiceId[]>([]);
   const [favoriteServiceIds, setFavoriteServiceIds] = useState<ServiceId[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
 
@@ -114,34 +112,6 @@ export const HomeScreen: React.FC = () => {
     },
   };
 
-  const loadServiceOrder = async () => {
-    try {
-      const raw = await AsyncStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const filtered = parsed.filter((id: string): id is ServiceId =>
-            defaultServiceIds.includes(id as ServiceId)
-          );
-          const merged: ServiceId[] = [...filtered, ...defaultServiceIds.filter((id) => !filtered.includes(id))];
-          setOrderedServiceIds(merged);
-          return;
-        }
-      }
-    } catch (error) {
-      console.warn('Erro ao carregar ordem do dashboard', error);
-    }
-    setOrderedServiceIds([...defaultServiceIds]);
-  };
-
-  const saveServiceOrder = async (newOrder: ServiceId[]) => {
-    try {
-      await AsyncStorage.setItem(storageKey, JSON.stringify(newOrder));
-    } catch (error) {
-      console.warn('Erro ao salvar ordem do dashboard', error);
-    }
-  };
-
   const loadFavoriteServices = async () => {
     try {
       const raw = await AsyncStorage.getItem(favoritesStorageKey);
@@ -172,21 +142,16 @@ export const HomeScreen: React.FC = () => {
   const toggleFavoriteService = (serviceId: ServiceId) => {
     const nextFavorites = favoriteServiceIds.includes(serviceId)
       ? favoriteServiceIds.filter((id) => id !== serviceId)
-      : [serviceId, ...favoriteServiceIds];
+      : [...favoriteServiceIds, serviceId];
     setFavoriteServiceIds(nextFavorites);
     saveFavoriteServices(nextFavorites);
   };
 
   const handleServicePress = (serviceId: ServiceId) => {
-    const service = serviceMap[serviceId];
-    const nextOrder: ServiceId[] = [serviceId, ...orderedServiceIds.filter((id) => id !== serviceId)];
-    setOrderedServiceIds(nextOrder);
-    saveServiceOrder(nextOrder);
-    service.onPress();
+    serviceMap[serviceId].onPress();
   };
 
   React.useEffect(() => {
-    loadServiceOrder();
     loadFavoriteServices();
   }, []);
 
@@ -300,20 +265,25 @@ export const HomeScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel={showOnlyFavorites ? 'Mostrar todos os serviços' : 'Mostrar apenas favoritos'}
           >
-            <Text style={homeStyles.filterChipToggleText}>
-              {showOnlyFavorites ? 'Mostrar todos' : 'Mostrar favoritos'}
-            </Text>
+            {showOnlyFavorites ? (
+              <>
+                <Ionicons name="grid-outline" size={18} color="#0055FF" />
+                <Text style={homeStyles.filterChipToggleText}>Mostrar todos</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="star-outline" size={18} color="#0055FF" />
+                <Text style={homeStyles.filterChipToggleText}>Mostrar favoritos</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
         <View style={homeStyles.grid}>
-          {(() => {
-            const baseOrder: ServiceId[] = orderedServiceIds.length ? orderedServiceIds : [...defaultServiceIds];
-            const merged = Array.from(
-              new Set([...favoriteServiceIds.filter((id) => baseOrder.includes(id)), ...baseOrder])
-            );
-            return showOnlyFavorites ? merged.filter((id) => favoriteServiceIds.includes(id)) : merged;
-          })().map((serviceId) => {
+          {(showOnlyFavorites
+            ? defaultServiceIds.filter((id) => favoriteServiceIds.includes(id))
+            : [...defaultServiceIds]
+          ).map((serviceId) => {
             const service = serviceMap[serviceId];
             if (!service) return null;
             const cardStyle = service.style;

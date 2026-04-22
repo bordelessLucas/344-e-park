@@ -34,7 +34,7 @@ function SidebarNavRow({
       <Text style={homeStyles.sidebarNavCardText} numberOfLines={2}>
         {label}
       </Text>
-      <Ionicons name="chevron-forward" size={18} color="#B0BEC5" />
+      <Ionicons name="chevron-forward" size={18} color="rgba(0, 85, 255, 0.35)" />
     </TouchableOpacity>
   );
 }
@@ -137,7 +137,7 @@ export function DrawerSidebar(props: DrawerContentComponentProps) {
   return (
     <View style={homeStyles.sidebarDrawerRoot}>
       <DrawerContentScrollView {...props} contentContainerStyle={homeStyles.sidebarScrollContent}>
-        <LinearGradient colors={['rgb(215, 239, 253)', '#F5FAFF']} style={homeStyles.sidebarHeroGradient}>
+        <LinearGradient colors={['rgb(215, 239, 253)', 'rgb(208, 232, 250)']} style={homeStyles.sidebarHeroGradient}>
           <TouchableOpacity
             style={homeStyles.sidebarProfileCard}
             activeOpacity={0.85}

@@ -15,7 +15,7 @@ export function MainDrawerNavigator() {
       screenOptions={{
         headerShown: false,
         drawerType: 'slide',
-        drawerStyle: { width: drawerWidth },
+        drawerStyle: { width: drawerWidth, backgroundColor: 'rgb(215, 239, 253)' },
         swipeEnabled: true,
         swipeEdgeWidth: 48,
         overlayColor: 'rgba(0, 0, 0, 0.5)',
