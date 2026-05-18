@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "epark",
-    "slug": "epark",
+    "slug": "344-epark",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.epark.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,12 +43,9 @@
     "extra": {
       "googlePlacesApiKey": "",
       "batteryCatalogUrl": "",
-      "firebaseApiKey": "AIzaSyAJYVi3fK6aSc1p9YOwS80PqEo030sAS9Y",
-      "firebaseAuthDomain": "epark-aeffb.firebaseapp.com",
-      "firebaseProjectId": "epark-aeffb",
-      "firebaseStorageBucket": "epark-aeffb.firebasestorage.app",
-      "firebaseMessagingSenderId": "803310516090",
-      "firebaseAppId": "1:803310516090:web:1a1750fa3e718b513248c3"
+      "eas": {
+        "projectId": "6506d232-5c79-4608-8d9b-7379a7d4a2f2"
+      }
     }
   }
 }
